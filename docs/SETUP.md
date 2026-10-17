@@ -4,13 +4,15 @@ This version uses **SQLite**, a database file on your own computer/server. There
 
 ## 1. Install and start
 
-1. Install **Node.js 24 LTS** from https://nodejs.org/. Use the normal installer and keep “Add to PATH” enabled. Reopen your terminal if it was already open.
+1. Install **Node.js 22.16+ or 24 LTS** from https://nodejs.org/. **For macOS Monterey 12.7.6, install [Node.js 22.23.3 for Mac](https://nodejs.org/dist/v22.23.3/node-v22.23.3.pkg). Node 24 requires macOS 13.5 or newer.** Use the normal installer and keep “Add to PATH” enabled. Reopen your terminal if it was already open.
 2. GitHub → **clint-99/laundry- → Code → Download ZIP**. Extract the ZIP somewhere you will keep it, such as Documents/Laundry. Do not run from inside the ZIP.
 3. Windows: double-click **start.cmd**. macOS/Linux: open a terminal in the extracted folder and run `./start.sh`. If your system disallows script execution, run this instead:
 
    ```sh
    node server/app.js
    ```
+
+   **Easy Mac Terminal method:** open Terminal (Applications → Utilities). Type `cd ` with a space, drag the extracted app folder from Finder into Terminal, and press Return. Then run `node server/app.js`. This does not require changing script permissions.
 
 4. Keep that terminal window open. It reports the port (default **3000**) and the location of the data directory. It does not print passwords or the setup code.
 5. On that same computer, type **localhost:3000** into your browser's address bar. Choose **Owner login**, then **Create owner account**.
@@ -57,7 +59,7 @@ You do not need `npm install` to start production: all server functions use Node
 
 SQLite has no subscription; public hosting is separate. You can run it on an existing always-on machine, home server or hosting you already have. This task does not promise a free always-on provider or public internet deployment.
 
-- Run Node 24+, use persistent disk, keep one server process per database, and serve the whole app/API on one origin. Avoid ephemeral/serverless filesystems that erase local data.
+- Run Node 22.16+ or 24+, use persistent disk, keep one server process per database, and serve the whole app/API on one origin. Avoid ephemeral/serverless filesystems that erase local data.
 - Put an HTTPS reverse proxy in front of the loopback-bound Node service. Set **PUBLIC_ORIGIN** to the exact external origin, e.g. `https://laundry.example.com` (no trailing slash or path). This enables Secure session cookies and checks browser write origins. Do not expose raw port 3000 to the internet.
 - The server deliberately does not trust X-Forwarded-For. Behind a reverse proxy, rate limits group callers by the proxy's socket IP. This is conservative but may limit legitimate customers. Configure any per-client edge limits on a trusted proxy; do not blindly trust caller-controlled IP headers. The built-in math check is lightweight spam friction, not bot-proof verification.
 - Keep TLS, operating system and Node patched. A host with persistent storage, backups and enough availability is required; stop and keep bookings closed if you cannot provide those.
@@ -84,7 +86,7 @@ Never run `docker compose down -v` unless you deliberately want to delete the da
 ## 6. Back up and restore
 
 1. **Staff → Download full database backup** makes a consistent SQLite snapshot, including orders, events, customers, settings, staff password hashes and sessions. Store it privately/encrypted. Never commit it to GitHub. This snapshot can be made while the app is running.
-2. CLI alternative (Node 24, no npm packages needed):
+2. CLI alternative (Node 22.16+ or 24, no npm packages needed):
 
    ```sh
    node scripts/backup.mjs /PRIVATE/BACKUP/FOLDER
@@ -99,7 +101,7 @@ Never run `docker compose down -v` unless you deliberately want to delete the da
 
 1. Download the updated source or `git pull` on a checkout with no conflicting edits.
 2. Keep **your existing data directory**; do not replace it with an empty extracted directory. Set DATA_DIR to its absolute path if keeping data separately from code.
-3. Stop the server and restart with Node 24. Current SQLite tables are created automatically if missing. Future data-model upgrades must include explicit migrations; do not delete the database to resolve an update error.
+3. Stop the server and restart with Node 22.16+ or 24. Current SQLite tables are created automatically if missing. Future data-model upgrades must include explicit migrations; do not delete the database to resolve an update error.
 4. This version deliberately replaces the previous Supabase app. No external Supabase data or credentials were supplied, so none were imported. If you already populated a hosted Supabase project, export it privately and request a migration before switching live operations. An older prototype `data/laundry.sqlite`, if present, is left untouched and is not used as `platform.sqlite`.
 
 ## 8. Tests and cloud workspace

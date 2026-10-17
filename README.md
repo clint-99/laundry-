@@ -8,7 +8,7 @@ A laundry pickup/delivery app with **SQLite storage and local staff accounts**. 
 
 ## Run it
 
-Install **Node.js 24 LTS** from [nodejs.org](https://nodejs.org/). Download this repository (GitHub → Code → Download ZIP) and extract it. On Windows double-click `start.cmd`; on macOS/Linux run `./start.sh`. Or use a terminal:
+Install **Node.js 22.16+ or 24 LTS** from [nodejs.org](https://nodejs.org/). **macOS Monterey:** use [Node.js 22.23.3 for Mac](https://nodejs.org/dist/v22.23.3/node-v22.23.3.pkg); Node 24 requires macOS 13.5 or newer. Download this repository (GitHub → Code → Download ZIP) and extract it. On Windows double-click `start.cmd`; on macOS/Linux run `./start.sh`. Or use a terminal:
 
 ```sh
 node server/app.js

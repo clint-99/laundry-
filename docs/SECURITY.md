@@ -2,7 +2,7 @@
 
 ## Storage and accounts
 
-The app runs on a Node.js 24 server using its built-in SQLite library. `data/platform.sqlite` contains business records, audit history, hashed staff passwords and hashed session tokens. The data directory is private (0700 on POSIX), the database and bootstrap secret files are 0600, and it is excluded from Git and static HTTP routes. Windows access control depends on the containing user's folder permissions. No cloud provider or database subscription is required.
+The app runs on a Node.js 22.16+ or 24 server using its built-in SQLite library. `data/platform.sqlite` contains business records, audit history, hashed staff passwords and hashed session tokens. The data directory is private (0700 on POSIX), the database and bootstrap secret files are 0600, and it is excluded from Git and static HTTP routes. Windows access control depends on the containing user's folder permissions. No cloud provider or database subscription is required.
 
 First-owner creation requires a random one-time code from the server's private data directory. There is no default account/password, public signup or internet email dependency. Setup closes after the first staff account exists. Passwords are salted with random 128-bit salts and hashed with Node scrypt (64-byte derived key, N=16384/r=8/p=1); comparisons are constant-time. Login failures use a generic message and are rate-limited by socket IP and email. The server never returns password hashes in session/profile APIs.
 

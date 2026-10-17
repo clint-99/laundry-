@@ -16,6 +16,10 @@ This replaces the previous Supabase-only acceptance record. Tests run against a 
 
 The current branch has no Supabase client, SQL/RLS migrations, Edge Functions, cloud API keys, or Turnstile dependency. Old SQL tests are intentionally superseded by the actual API-role tests. The working app uses the Node server. GitHub Pages publishes only an informational setup/download notice.
 
+## macOS Monterey compatibility
+
+The full 22-test suite and 10 real browser workflow groups also passed using **Node.js 22.23.3** on Linux. Node 22.16 is the minimum because the full-backup API was introduced in that release. Official Node 22 x64 binaries support macOS 11+, while Node 24 binaries require macOS 13.5+. This gives Monterey 12.7.6 an official Node runtime option. The specific late-2015 Mac was not available for physical testing. On Node 22, the SQLite ExperimentalWarning is expected and is not a failed test.
+
 ## Integration coverage
 
 - Owner bootstrap needs the private one-time code. Wrong codes fail; setup closes after first account. No default owner credentials are shipped.
