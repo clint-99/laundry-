@@ -181,9 +181,36 @@ try {
   );
   const customerContext = await browser.newContext({ serviceWorkers: "block" }),
     book = await page(customerContext);
+  mkdirSync("/tmp/laundry-sqlite-screenshots", { recursive: true });
+  await book.setViewportSize({ width: 1440, height: 1100 });
+  await book.goto(base + "/book/");
+  await book.getByLabel("Full name", { exact: true }).waitFor();
+  await book.screenshot({
+    path: "/tmp/laundry-sqlite-screenshots/customer-desktop.png",
+    fullPage: true,
+  });
+  assert.equal(
+    await book.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+    false,
+  );
   await book.setViewportSize({ width: 360, height: 900 });
   await book.emulateMedia({ colorScheme: "dark" });
   await book.goto(base + "/book/");
+  await book
+    .getByLabel("Email address (optional)", { exact: true })
+    .fill("Customer@Example.com");
+  await book.screenshot({
+    path: "/tmp/laundry-sqlite-screenshots/customer-mobile.png",
+    fullPage: true,
+  });
+  assert.equal(
+    await book.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+    false,
+  );
   await book.getByLabel("Full name", { exact: true }).fill("New Test Customer");
   await book.getByLabel("Mobile number", { exact: true }).fill("09178888888");
   await book.getByRole("button", { name: "Continue →" }).click();
@@ -247,8 +274,20 @@ try {
   const registered = app.store
     .all("customers")
     .find((c) => c.phone === "+639178888888");
+  assert.equal(registered.email, "customer@example.com");
+  await nav(owner, "Customers");
+  await owner
+    .getByRole("searchbox", { name: "Search customers" })
+    .fill("customer@example.com");
+  await owner.getByRole("cell", { name: /New Test Customer/ }).waitFor();
+  assert.equal(await owner.locator("tbody tr").count(), 1);
   await book.reload();
+  await book.getByRole("heading", { name: "Your laundry's journey" }).waitFor();
   await book.getByText(registered.bag_code, { exact: true }).waitFor();
+  await book.screenshot({
+    path: "/tmp/laundry-sqlite-screenshots/customer-tracking.png",
+    fullPage: true,
+  });
   assert.equal(await book.getByLabel("Full name", { exact: true }).count(), 0);
   assert.equal(
     await book.getByRole("button", { name: "Sign in", exact: true }).count(),
@@ -310,27 +349,26 @@ try {
   );
   pass("real token rebooking without customer login or external services");
   await book.goto(base + "/book/");
-  await book
-    .getByRole("button", {
-      name: "Use this device for a different customer",
-      exact: true,
-    })
-    .click();
-  const blankName = book.getByLabel("Full name", { exact: true });
-  await blankName.waitFor();
-  assert.equal(await blankName.inputValue(), "");
   assert.equal(
-    await book.getByLabel("Mobile number", { exact: true }).inputValue(),
-    "",
+    await book
+      .getByRole("button", { name: /different customer|Start a new request/ })
+      .count(),
+    0,
   );
   assert.equal(
     (await customerContext.cookies()).some(
       (c) => c.name === "laundry_customer",
     ),
-    false,
+    true,
   );
+  await book
+    .getByText("Do I need to create an account?", { exact: true })
+    .click();
+  await book
+    .getByText(/Clearing cookies or using private browsing removes recognition/)
+    .waitFor();
   pass(
-    "shared-device switch clears customer recognition and previously typed personal details",
+    "saved email, mobile and desktop layouts, order tracker, returning recognition and removal of the different-customer option",
   );
   await nav(owner, "Staff");
   const downloadPromise = owner.waitForEvent("download");
@@ -389,7 +427,12 @@ try {
   });
   await shell.reload();
   const keys = await shell.evaluate(async () => {
-    const cache = await caches.open("laundry-shell-v3");
+    const names = (await caches.keys()).filter((name) =>
+      name.startsWith("laundry-shell-"),
+    );
+    if (names.length !== 1)
+      throw Error("Expected exactly one active laundry shell cache");
+    const cache = await caches.open(names[0]);
     return (await cache.keys()).map((r) => r.url);
   });
   assert.ok(keys.length > 10);

@@ -87,6 +87,14 @@ export function customerForm(c) {
           autocomplete: "street-address",
         }),
       ),
+      field(
+        "Email (optional)",
+        input("email", c?.email, {
+          type: "email",
+          maxlength: 254,
+          autocomplete: "email",
+        }),
+      ),
       field("Landmark", input("landmark", c?.landmark, { maxlength: 300 })),
       field(
         "Private customer notes",
@@ -138,7 +146,7 @@ export function orderForm(o, approveAfterSave = false) {
     });
   find.oninput = () => {
     const matches = state.customers.filter((c) =>
-      `${c.bag_code} ${c.full_name} ${c.phone}`
+      `${c.bag_code} ${c.full_name} ${c.phone} ${c.email || ""}`
         .toLowerCase()
         .includes(find.value.toLowerCase()),
     );
@@ -467,6 +475,7 @@ export function orderDetail(o) {
           ["Order", o.order_no],
           ["Customer", c.full_name],
           ["Phone", c.phone],
+          ["Email", c.email || "Not provided"],
           ["Pickup address", `${c.address}, ${c.area}`],
           ["Landmark", c.landmark || "—"],
           [
@@ -853,12 +862,12 @@ export function customersView() {
   const body = h("div"),
     search = input("search", "", {
       type: "search",
-      placeholder: "Find customer by bag code, name or phone",
+      placeholder: "Find by customer ID, name, phone or email",
       "aria-label": "Search customers",
     });
   function draw() {
     const matches = state.customers.filter((c) =>
-      `${c.bag_code} ${c.full_name} ${c.phone}`
+      `${c.bag_code} ${c.full_name} ${c.phone} ${c.email || ""}`
         .toLowerCase()
         .includes(search.value.toLowerCase()),
     );
@@ -902,7 +911,13 @@ export function customersView() {
                       c.blocked &&
                         h("span", { class: "badge problem" }, "Blocked"),
                     ),
-                    h("td", {}, c.phone, h("small", {}, c.area)),
+                    h(
+                      "td",
+                      {},
+                      c.phone,
+                      c.email && h("small", {}, c.email),
+                      h("small", {}, c.area),
+                    ),
                     h(
                       "td",
                       {},

@@ -41,6 +41,7 @@ let requestId = uuid();
 const newDetails = () => ({
   name: "",
   phone: "",
+  email: "",
   area: "",
   address: "",
   landmark: "",
@@ -56,6 +57,14 @@ const newDetails = () => ({
 });
 const data = newDetails();
 const t = (key, args) => translate(lang, key, args);
+function readableDate(value) {
+  return new Intl.DateTimeFormat(lang === "fil" ? "fil-PH" : "en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(value + "T12:00:00Z"));
+}
 function contact() {
   const nodes = [];
   const url = safeUrl(cfg?.facebook_url);
@@ -79,32 +88,186 @@ function contact() {
     );
   return h("div", { class: "inline" }, nodes);
 }
+function story() {
+  const price = cfg?.services?.length
+    ? Math.min(...cfg.services.map((s) => Number(s.price_per_load)))
+    : null;
+  return h(
+    "aside",
+    { class: "booking-story" },
+    h("span", { class: "eyebrow" }, t("storyLabel")),
+    h("h1", {}, t("storyTitle")),
+    h("p", { class: "story-description" }, t("storyText")),
+    h(
+      "div",
+      { class: "laundry-art", "aria-hidden": "true" },
+      h("div", { class: "art-spark spark-one" }, "+"),
+      h("div", { class: "art-spark spark-two" }, "✦"),
+      h("div", { class: "art-orbit" }),
+      h("div", { class: "folded-towels" }, h("span"), h("span"), h("span")),
+      h(
+        "div",
+        { class: "laundry-bag" },
+        h("span", { class: "bag-handle" }),
+        h("img", { src: "../icons/basket.svg", alt: "" }),
+        h("strong", {}, cfg?.business_name || "Fresh Fold"),
+        h("small", {}, "LAUNDRY, SIMPLIFIED"),
+      ),
+    ),
+    price != null &&
+      h(
+        "div",
+        { class: "story-price" },
+        h(
+          "strong",
+          {},
+          t("storyPrice", { price: money(price, cfg.currency_symbol) }),
+        ),
+        h("span", {}, t("storyPriceNote")),
+      ),
+    h(
+      "div",
+      { class: "story-pills" },
+      h("span", {}, "✓ " + t("free")),
+      h(
+        "span",
+        {},
+        "✓ " + (lang === "fil" ? "Walang account" : "No account needed"),
+      ),
+    ),
+  );
+}
+function orderTimeline(status) {
+  const phases = [
+    ["placed", "trackPlaced"],
+    ["picked_up", "trackPicked"],
+    ["at_shop", "trackShop"],
+    ["ready", "trackReady"],
+    ["delivered", "trackDelivered"],
+  ];
+  const current = phases.findIndex(
+    ([value]) => value === (status === "weighed" ? "picked_up" : status),
+  );
+  return h(
+    "section",
+    { class: "order-tracker", "aria-label": t("trackTitle") },
+    h("h3", {}, t("trackTitle")),
+    h(
+      "ol",
+      {},
+      phases.map(([value, label], i) =>
+        h(
+          "li",
+          {
+            class: i < current ? "complete" : i === current ? "current" : "",
+            "aria-current": i === current ? "step" : null,
+          },
+          h(
+            "span",
+            { class: "tracker-dot", "aria-hidden": "true" },
+            i < current ? "✓" : String(i + 1),
+          ),
+          h("span", {}, t(label)),
+        ),
+      ),
+    ),
+  );
+}
 function shell(...children) {
   document.documentElement.lang = lang === "fil" ? "fil" : "en";
   replace(
     root,
     h(
       "main",
-      { class: "book-shell" },
+      {
+        class: `book-shell${customer || receipt || step > 0 ? " booking-focused" : ""}`,
+      },
       h(
         "header",
         { class: "book-header" },
         brand(cfg?.business_name),
-        button(
-          t("language"),
-          () => {
-            lang = lang === "en" ? "fil" : "en";
-            render();
-          },
-          "secondary",
+        h(
+          "div",
+          { class: "header-actions" },
+          h(
+            "span",
+            { class: "header-caption" },
+            lang === "fil"
+              ? "Mas magaan ang araw mo."
+              : "A lighter kind of laundry day.",
+          ),
+          button(
+            t("language"),
+            () => {
+              lang = lang === "en" ? "fil" : "en";
+              render();
+            },
+            "secondary",
+          ),
         ),
       ),
-      children,
+      h(
+        "div",
+        { class: "booking-layout" },
+        story(),
+        h("div", { class: "booking-content", id: "booking" }, children),
+      ),
+      h(
+        "section",
+        { class: "how-section" },
+        h(
+          "div",
+          { class: "eyebrow" },
+          lang === "fil" ? "MADALI LANG" : "THE SIMPLE ROUTINE",
+        ),
+        h("h2", {}, t("howTitle")),
+        h(
+          "div",
+          { class: "how-grid" },
+          [
+            ["01", "howOne", "howOneText"],
+            ["02", "howTwo", "howTwoText"],
+            ["03", "howThree", "howThreeText"],
+          ].map(([n, title, description]) =>
+            h(
+              "article",
+              {},
+              h("span", { class: "how-number" }, n),
+              h("h3", {}, t(title)),
+              h("p", {}, t(description)),
+            ),
+          ),
+        ),
+      ),
+      h(
+        "section",
+        { class: "faq-section" },
+        h("h2", {}, t("faqTitle")),
+        [
+          ["faqBag", "faqBagAnswer"],
+          ["faqRemember", "faqRememberAnswer"],
+          ["faqChanges", "faqChangesAnswer"],
+        ].map(([q, a]) =>
+          h("details", {}, h("summary", {}, t(q)), h("p", {}, t(a))),
+        ),
+      ),
       h(
         "footer",
-        { class: "customer-staff-links" },
-        h("a", { href: "../owner/" }, "Owner / admin"),
-        h("a", { href: "../rider/" }, "Rider"),
+        { class: "book-footer" },
+        h(
+          "div",
+          {},
+          brand(cfg?.business_name),
+          h("p", {}, t("customerCare")),
+          contact(),
+        ),
+        h(
+          "div",
+          { class: "customer-staff-links" },
+          h("span", {}, t("staffAccess")),
+          h("a", { href: "../owner/" }, "Owner / admin"),
+          h("a", { href: "../rider/" }, "Rider"),
+        ),
       ),
     ),
   );
@@ -288,13 +451,7 @@ function render() {
   if (receipt) return showReceipt();
   if (customer?.invalid) {
     shell(
-      h(
-        "section",
-        { class: "card" },
-        h("h1", {}, t("invalid")),
-        contact(),
-        button(t("notYou", { name: "" }), () => forgetCustomer(), "quiet"),
-      ),
+      h("section", { class: "card" }, h("h1", {}, t("invalid")), contact()),
     );
     return;
   }
@@ -307,8 +464,7 @@ function render() {
         { class: "card" },
         customer && customerCard(),
         h("h1", {}, t("closed")),
-        customer &&
-          button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
+
         contact(),
       ),
     );
@@ -325,25 +481,6 @@ function customerCard() {
     h("strong", { class: "bag-code" }, customer.customer_code),
     h("p", {}, t("bagInstructions")),
   );
-}
-async function forgetCustomer() {
-  try {
-    await edge("forget");
-    token = null;
-    customer = null;
-    receipt = null;
-    for (const key of Object.keys(data)) delete data[key];
-    Object.assign(data, newDetails(), {
-      service_id: cfg.services[0]?.id || "",
-      pickup_date:
-        cfg.dates.find((d) => d.bookable && d.capacity_left >= 1)?.date || "",
-    });
-    step = 0;
-    requestId = uuid();
-    render();
-  } catch (e) {
-    connectionError(e);
-  }
 }
 function pendingRegistration() {
   const request = customer.request;
@@ -362,7 +499,7 @@ function pendingRegistration() {
           : t("rememberAfterApproval"),
       ),
       button(t("refreshStatus"), () => start()),
-      button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
+
       contact(),
     ),
   );
@@ -378,9 +515,15 @@ function returning() {
         customerCard(),
         h("h2", {}, customer.active_order.order_no),
         badge(customer.active_order.status),
-        h("p", {}, `${t("due")}: ${customer.active_order.due_date}`),
+        h(
+          "p",
+          {},
+          `${t("due")}: ${readableDate(customer.active_order.due_date)}`,
+        ),
+        orderTimeline(customer.active_order.status),
+        button(t("refreshStatus"), () => start(), "secondary"),
         h("p", {}, t("change")),
-        button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
+
         contact(),
       ),
     );
@@ -406,11 +549,6 @@ function returning() {
       error,
       submit,
       h("p", { class: "help" }, t("priceFinal")),
-      button(
-        t("notYou", { name: customer.first_name }),
-        () => forgetCustomer(),
-        "quiet",
-      ),
     ),
     contact(),
   );
@@ -426,7 +564,17 @@ function newCustomer() {
         class: "progress-dots",
         "aria-label": t("progress", { step: step + 1 }),
       },
-      titles.map((_, i) => h("span", { class: i <= step ? "done" : "" })),
+      titles.map((title, i) =>
+        h(
+          "span",
+          {
+            class: i <= step ? "done" : "",
+            "aria-current": i === step ? "step" : null,
+          },
+          h("b", {}, i < step ? "✓" : String(i + 1)),
+          h("small", {}, t(title)),
+        ),
+      ),
     ),
     h("h2", {}, t(titles[step])),
   );
@@ -449,6 +597,26 @@ function newCustomer() {
           autocomplete: "tel",
         }),
         t("phoneHelp"),
+      ),
+      field(
+        t("email"),
+        bind("email", "email", {
+          maxlength: 254,
+          autocomplete: "email",
+          placeholder: "you@example.com",
+        }),
+        t("emailHelp"),
+      ),
+      h(
+        "div",
+        { class: "remember-note" },
+        h("span", { class: "note-icon", "aria-hidden": "true" }, "✓"),
+        h(
+          "div",
+          {},
+          h("strong", {}, t("rememberTitle")),
+          h("p", {}, t("rememberNote")),
+        ),
       ),
     );
   if (step === 1) {
@@ -535,6 +703,7 @@ function newCustomer() {
         [
           [t("name"), data.name],
           [t("phone"), data.phone],
+          ...(data.email ? [[t("email"), data.email]] : []),
           [t("address"), `${data.address}, ${data.area}`],
           [
             t("delivery"),
@@ -542,7 +711,10 @@ function newCustomer() {
               ? `${data.delivery_address}, ${data.delivery_area}`
               : `${data.address}, ${data.area}`,
           ],
-          [t("pickup"), `${data.pickup_date} · ${t(data.pickup_window)}`],
+          [
+            t("pickup"),
+            `${readableDate(data.pickup_date)} · ${t(data.pickup_window)}`,
+          ],
         ].map(([k, v]) => [h("dt", {}, k), h("dd", {}, v)]),
       ),
       total(),
@@ -700,18 +872,21 @@ function showReceipt() {
         "div",
         { class: "total" },
         h("strong", {}, money(result.total, cfg.currency_symbol)),
-        h("p", {}, `${result.pickup_date} · ${t(result.pickup_window)}`),
+        h(
+          "p",
+          {},
+          `${readableDate(result.pickup_date)} · ${t(result.pickup_window)}`,
+        ),
       ),
       h("p", {}, returning ? t("free") : t("rememberAfterApproval")),
-      !returning &&
-        button(
-          t("refreshStatus"),
-          () => {
-            receipt = null;
-            start();
-          },
-          "secondary",
-        ),
+      button(
+        t("refreshStatus"),
+        () => {
+          receipt = null;
+          start();
+        },
+        "secondary",
+      ),
       contact(),
     ),
   );

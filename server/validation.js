@@ -71,7 +71,11 @@ export function validateBooking(data, returning) {
   if (returning) return { ...result, token: token(data) };
   if (data.consent !== true)
     throw new RequestError("Please agree to the privacy notice to continue.");
+  const email = data.email ? text(data, "email", 0, 254).toLowerCase() : "";
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw new RequestError("Enter a valid email address.");
   Object.assign(result, {
+    email,
     name: text(data, "name", 1, 120),
     phone: normalizePhone(text(data, "phone", 10, 24)),
     area: text(data, "area", 1, 120),

@@ -20,7 +20,7 @@ The current branch has no Supabase client, SQL/RLS migrations, Edge Functions, c
 
 The full 23-test suite and 12 real browser workflow groups also passed using **Node.js 22.23.3** on Linux. Node 22.16 is the minimum because the full-backup API was introduced in that release. Official Node 22 x64 binaries support macOS 11+, while Node 24 binaries require macOS 13.5+. This gives Monterey 12.7.6 an official Node runtime option. The specific late-2015 Mac was not available for physical testing. On Node 22, the SQLite ExperimentalWarning is expected and is not a failed test.
 
-The customer-recognition update adds real API/browser coverage for first-approval gating, private cookie recognition, permanent ID display, one-tap rebooking with no token/details in the form, guessed public IDs being refused, and shared-device forgetting that clears both cookies and typed personal details. Normal visits to the root URL open the customer page. Customer cookies are HttpOnly and printed labels are checked to omit phone/address. Raw customer-device capabilities are not stored in cached receipts or returned in JSON.
+The customer-recognition update adds real API/browser coverage for first-approval gating, private cookie recognition, permanent ID display, one-tap rebooking with no token/details in the form, guessed public IDs being refused, saved optional email, absence of the different-customer control, responsive layouts, and the customer order-progress tracker. Normal visits to the root URL open the customer page. Customer cookies are HttpOnly and printed labels are checked to omit phone/address. Raw customer-device capabilities are not stored in cached receipts or returned in JSON.
 
 ## Integration coverage
 
@@ -73,3 +73,5 @@ Two defects found by these tests were corrected: stacked undo toasts covering ri
 - Docker build/run on a production host (configuration can be checked separately). Docker is optional; Node tests exercise the actual application.
 - Migration of an independently populated Supabase project. No such project/data was supplied. An old SQLite prototype file is left untouched and not imported.
 - Restore/publish validation in a new cloud task. A saved environment draft is not public deployment or a guaranteed permanent host.
+
+The refreshed customer UI uses a consistent light palette in either OS colour scheme, visible booking steps, an illustrated desktop layout, a compact phone layout, service explanations and FAQs. Email is optional and validated on the server. Existing SQLite files receive an additive email-column migration without altering customer IDs, orders or device cookies.

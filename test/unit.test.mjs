@@ -60,6 +60,12 @@ test("new bookings require consent, validated coordinates and bounded text", () 
     consent: true,
   };
   assert.equal(validateBooking(p, false).phone, "+639171234567");
+  assert.equal(
+    validateBooking({ ...p, email: "  ANA@Example.com " }, false).email,
+    "ana@example.com",
+  );
+  assert.equal(validateBooking(p, false).email, "");
+  assert.throws(() => validateBooking({ ...p, email: "invalid-email" }, false));
   for (const change of [
     { consent: false },
     { name: "a".repeat(121) },

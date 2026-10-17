@@ -1,6 +1,45 @@
 // Filipino copy is a working translation and needs native-speaker review before launch.
 export const strings = {
   en: {
+    email: "Email address (optional)",
+    emailHelp:
+      "Saved with your contact details. No account or password needed.",
+    rememberTitle: "Once is all it takes.",
+    rememberNote:
+      "We remember this browser. Next time, your details are ready and rebooking takes one tap.",
+    storyLabel: "YOUR LAUNDRY, TAKEN CARE OF",
+    storyTitle: "A fresh start. Without the laundry day.",
+    storyText:
+      "Book a pickup, leave the washing to us, and make room for the things you love.",
+    storyPrice: "Laundry from {price} / load",
+    storyPriceNote: "Pickup and delivery included",
+    howTitle: "From your door. Back to your day.",
+    howOne: "Book your pickup",
+    howOneText: "Choose a day and window that work for you.",
+    howTwo: "We collect & clean",
+    howTwoText:
+      "Your rider takes your labelled bag to your assigned laundry shop.",
+    howThree: "Fresh laundry, delivered",
+    howThreeText: "Follow your order here until it arrives back at your door.",
+    faqTitle: "A few things to know",
+    faqBag: "How do I prepare my laundry?",
+    faqBagAnswer:
+      "Put your laundry in your reusable bag. After confirmation, write your permanent customer ID on it so the rider can match it to your order.",
+    faqRemember: "Do I need to create an account?",
+    faqRememberAnswer:
+      "No. We save your details after your first request and remember this browser. Once confirmed, you can return here to track or rebook. On another device, ask us for your private booking link. Clearing cookies or using private browsing removes recognition.",
+    faqChanges: "Need to change your booking?",
+    faqChangesAnswer:
+      "Contact us with your order number. The team can help with pickup details, your saved information, or a cancellation.",
+    trackTitle: "Your laundry's journey",
+    trackPlaced: "Booking confirmed",
+    trackPicked: "Collected by rider",
+    trackShop: "At the laundry shop",
+    trackReady: "Ready to come home",
+    trackDelivered: "Delivered to you",
+    customerCare: "Need a hand? We're here to help.",
+    staffAccess: "Team access",
+
     language: "Filipino",
     customerId: "Your permanent customer / bag ID",
     bagInstructions:
@@ -8,12 +47,11 @@ export const strings = {
     rememberAfterApproval:
       "Your details are saved on this device. Once your first request is confirmed, your permanent customer ID appears here. Next time, open this page and tap Book again—no details to retype.",
     refreshStatus: "Refresh my booking",
-    differentCustomer: "Use this device for a different customer",
     requestCancelled:
-      "This request was cancelled. Contact the business or start a new request.",
+      "This request was cancelled. Contact us to arrange another pickup.",
 
     intro: "A little less laundry. A little more life.",
-    newTitle: "Fresh laundry starts at your door.",
+    newTitle: "Let’s book your pickup.",
     subtitle: "Free pickup and delivery. We’ll handle the heavy lifting.",
     about: "About you",
     address: "Pickup address",
@@ -54,7 +92,7 @@ export const strings = {
     consent:
       "I agree to share my contact and address details to arrange this laundry service.",
     privacy:
-      "We collect your name, mobile number, pickup address and optional location to arrange your booking. The owner and working riders see the details they need. Your personal link gives access to rebooking, so keep it private. We remember this browser using a private cookie so you can book again without typing details. On shared devices, choose Use this device for a different customer to forget it. Message the business to request correction or deletion, subject to record-keeping requirements.",
+      "We collect your name, mobile number, optional email, pickup address and optional location to arrange your booking. The owner and working riders see the details they need. Your personal link gives access to rebooking, so keep it private. We remember this browser using a private cookie so you can book again without typing details. Use your own device for remembered bookings; clearing this site’s cookies removes recognition. Message the business to request correction or deletion, subject to record-keeping requirements.",
     request: "Request pickup",
     bookAgain: "Book again",
     sending: "Sending…",
@@ -92,6 +130,42 @@ export const strings = {
     loadCount: "{loads} loads × {price}",
   },
   fil: {
+    email: "Email address (opsyonal)",
+    emailHelp: "Kasama sa naka-save mong detalye. Walang account o password.",
+    rememberTitle: "Isang beses lang.",
+    rememberNote:
+      "Naaalala ka ng browser na ito. Sa susunod, isang tap na lang ang pag-book.",
+    storyLabel: "ALAGA ANG IYONG LABAHIN",
+    storyTitle: "Bagong linis. Mas maraming oras para sa iyo.",
+    storyText: "Mag-book ng pickup at ipaubaya sa amin ang paglalaba.",
+    storyPrice: "Mula {price} / load",
+    storyPriceNote: "Kasama ang pickup at delivery",
+    howTitle: "Mula sa pinto mo, pabalik sa iyo.",
+    howOne: "Mag-book ng pickup",
+    howOneText: "Pumili ng araw at oras na angkop sa iyo.",
+    howTwo: "Kukunin at lalabhan",
+    howTwoText: "Dadalhin ng rider ang bag mo sa nakatalagang laundry shop.",
+    howThree: "Malinis at ihahatid",
+    howThreeText: "Subaybayan ang order dito hanggang maihatid sa iyo.",
+    faqTitle: "Mga dapat malaman",
+    faqBag: "Paano ihahanda ang labahin?",
+    faqBagAnswer:
+      "Ilagay sa reusable bag. Pagkatapos makumpirma, isulat ang permanent customer ID sa bag para maitugma ng rider sa order.",
+    faqRemember: "Kailangan ba ng account?",
+    faqRememberAnswer:
+      "Hindi. Naka-save ang detalye mo at naaalala ka ng browser na ito. Sa ibang device, hingin ang personal booking link. Mawawala ang pagkilala kapag binura ang cookies o gumamit ng private browsing.",
+    faqChanges: "May babaguhin sa booking?",
+    faqChangesAnswer:
+      "Makipag-ugnayan sa amin gamit ang order number para sa pagbabago o pagkansela.",
+    trackTitle: "Ang biyahe ng iyong labahin",
+    trackPlaced: "Kumpirmado ang booking",
+    trackPicked: "Nakuha ng rider",
+    trackShop: "Nasa laundry shop",
+    trackReady: "Handa nang ihatid",
+    trackDelivered: "Naihatid na",
+    customerCare: "Kailangan ng tulong? Nandito kami.",
+    staffAccess: "Para sa team",
+
     language: "English",
     customerId: "Permanenteng customer / bag ID mo",
     bagInstructions:
@@ -99,7 +173,6 @@ export const strings = {
     rememberAfterApproval:
       "Nai-save ang detalye mo sa device na ito. Pag nakumpirma ang unang request, lalabas dito ang permanenteng customer ID. Sa susunod, buksan lang ito at pindutin ang Mag-book muli.",
     refreshStatus: "I-refresh ang booking ko",
-    differentCustomer: "Gamitin para sa ibang customer",
     requestCancelled:
       "Nakansela ang request na ito. Makipag-ugnayan o gumawa ng bagong request.",
 
@@ -144,7 +217,7 @@ export const strings = {
     consent:
       "Pumapayag akong ibahagi ang aking contact at address para sa serbisyong ito.",
     privacy:
-      "Kinokolekta namin ang pangalan, mobile number, pickup address at opsyonal na lokasyon upang ayusin ang booking. Makikita ng may-ari at mga rider ang detalyeng kailangan nila. Naalala ng pribadong cookie ang browser na ito para sa susunod na booking. Sa shared device, piliing gamitin para sa ibang customer. Panatilihing pribado ang personal na link. Mag-message para magpabago o magpabura ng impormasyon, alinsunod sa mga kinakailangang talaan.",
+      "Kinokolekta namin ang pangalan, mobile number, opsyonal na email, pickup address at opsyonal na lokasyon upang ayusin ang booking. Makikita ng may-ari at mga rider ang detalyeng kailangan nila. Naalala ng pribadong cookie ang browser na ito para sa susunod na booking. Gamitin ang sariling device. Burahin ang cookies ng site para alisin ang pagkilala. Panatilihing pribado ang personal na link. Mag-message para magpabago o magpabura ng impormasyon, alinsunod sa mga kinakailangang talaan.",
     request: "Humiling ng pickup",
     bookAgain: "Mag-book muli",
     sending: "Ipinapadala…",

@@ -90,6 +90,16 @@ export class Store {
     this.db.exec(
       readFileSync(new URL("./schema.sql", import.meta.url), "utf8"),
     );
+    // Additive migration keeps existing installations and customer records intact.
+    if (
+      !this.db
+        .prepare("PRAGMA table_info(customers)")
+        .all()
+        .some((column) => column.name === "email")
+    )
+      this.db.exec(
+        "ALTER TABLE customers ADD COLUMN email TEXT NOT NULL DEFAULT ''",
+      );
     chmodSync(this.path, 0o600);
     this.db.exec("PRAGMA busy_timeout=5000");
     this.onChange = () => {};
@@ -444,6 +454,7 @@ export class Store {
         "active",
       ],
       customers: [
+        "email",
         "full_name",
         "phone",
         "area",
@@ -530,6 +541,9 @@ export class Store {
       out.active = boolean(row.active ?? true, "active");
     }
     if (table === "customers") {
+      out.email = text(row.email || "", "email", 0, 254).toLowerCase();
+      if (out.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.email))
+        throw new AppError("Check the email address.");
       checkText("full_name", 1, 120);
       out.phone = text(row.phone, "phone", 13, 13);
       if (!/^\+639\d{9}$/.test(out.phone))
@@ -1121,6 +1135,7 @@ export class Store {
               "customers",
               {
                 full_name: clean.name,
+                email: clean.email,
                 phone: clean.phone,
                 area: clean.area,
                 address: clean.address,
@@ -1160,6 +1175,7 @@ export class Store {
           "Review submitted details: " +
             JSON.stringify({
               name: clean.name,
+              email: clean.email,
               phone: clean.phone,
               address: clean.address,
               area: clean.area,
