@@ -81,3 +81,15 @@ export function download(name, text, type = "text/csv") {
 export function dispatchText(o, c, s) {
   return `${c.bag_code} · ${c.full_name}\n${c.phone}\n${o.status === "ready" && o.deliver_to_other ? o.delivery_address : c.address}, ${o.status === "ready" && o.deliver_to_other ? o.delivery_area : c.area}\n${o.status === "ready" && o.deliver_to_other ? "" : c.landmark || ""}\n${o.loads} loads · ${o.bags} bags · ${o.pickup_window}\n${o.status === "ready" ? "Collect from" : "Take to"}: ${s?.name || "Shop not assigned"} · ${s?.phone || ""} · ${s?.address || ""}\n${mapLink(o.status === "ready" && o.deliver_to_other ? o.delivery_address : c.address, o.deliver_to_other && o.status === "ready" ? null : c.lat, o.deliver_to_other && o.status === "ready" ? null : c.lng)}`;
 }
+
+// randomUUID is HTTPS-only in browsers; getRandomValues also supports a LAN trial.
+export function uuid() {
+  if (globalThis.crypto.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}

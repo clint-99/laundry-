@@ -1,9 +1,6 @@
-// PUBLIC values only. Never put a service-role key or Turnstile secret here.
+// Branding only. No database keys or subscriptions are needed.
 export const CONFIG = Object.freeze({
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
-  TURNSTILE_SITE_KEY: "",
   REPOSITORY_URL: "https://github.com/clint-99/laundry-",
-  BRAND_NAME: "{{BUSINESS_NAME}}",
+  BRAND_NAME: "Fresh Fold",
   LOGO: new URL("../icons/basket.svg", import.meta.url).href,
 });

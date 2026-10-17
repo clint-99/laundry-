@@ -1,2 +1,2 @@
-# Preserve vendored bytes and upstream license formatting.
-shared/vendor/* -text -whitespace
+*.sh text eol=lf
+*.cmd text eol=crlf

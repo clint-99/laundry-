@@ -8,3 +8,6 @@ test/.edge-handler.mjs
 .supabase/
 supabase/.temp/
 _site/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

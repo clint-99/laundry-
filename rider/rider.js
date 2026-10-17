@@ -1,5 +1,5 @@
 import { h, replace } from "../shared/h.js";
-import { db, query } from "../shared/supabase.js";
+import { db, query } from "../shared/api.js";
 import {
   authGate,
   brand,
@@ -15,7 +15,7 @@ import {
   skeleton,
   registerPWA,
 } from "../shared/ui.js";
-import { mapLink } from "../shared/utils.js";
+import { mapLink, uuid } from "../shared/utils.js";
 const root = document.getElementById("app");
 let tasks = [],
   tab = "pickups",
@@ -101,7 +101,7 @@ async function sync() {
           run: () =>
             enqueue({
               kind: "undo",
-              id: crypto.randomUUID(),
+              id: uuid(),
               order: a.order,
               action: a.id,
             }),
@@ -129,6 +129,7 @@ async function refresh(shouldSync = true) {
     });
     if (!queue.length) errorMessage = "";
   } catch (e) {
+    if (e.status === 403) tasks = [];
     errorMessage = navigator.onLine
       ? e.message
       : "You’re offline. Your last task list is shown; taps will wait to sync.";
@@ -167,7 +168,7 @@ function report(task) {
             throw Error("Add a short note.");
           await enqueue({
             kind: "report",
-            id: crypto.randomUUID(),
+            id: uuid(),
             order: task.order_id,
             reason: `${reason.value}${note.value.trim() ? ": " + note.value.trim() : ""}`,
           });
@@ -281,7 +282,7 @@ function stop(task) {
           button(actionLabel, () =>
             enqueue({
               kind: "mark",
-              id: crypto.randomUUID(),
+              id: uuid(),
               order: task.order_id,
               to,
             }),
@@ -343,7 +344,6 @@ function draw() {
                 button(
                   "Sign out with taps saved",
                   async () => {
-                    active = false;
                     await db.auth.signOut();
                     d.close();
                   },
@@ -352,7 +352,6 @@ function draw() {
               ),
             );
           } else {
-            active = false;
             db.auth.signOut();
           }
         },

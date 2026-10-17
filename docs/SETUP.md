@@ -1,166 +1,115 @@
-# Owner’s setup guide
+# Setup: no subscription or database account
 
-You need your own GitHub, Supabase and Cloudflare accounts. This guide does not assume you are a programmer. Do not send passwords, API secrets or customer files in chat. The account screens below are external services and can change; use the named feature if a menu has moved. Review current pricing/limits on each provider before launch.
+This version uses **SQLite**, a database file on your own computer/server. There is no database bill, Supabase setup, API key or Cloudflare account. GitHub stores and lets you edit the source code. It does not run the server.
 
-## 1. Put the files in GitHub and enable Pages
+## 1. Install and start
 
-1. Use your existing **clint-99/laundry-** repository. The app files have been created locally; they have not been pushed. In your Git client review the changes, commit them, and push to `main`. If using a terminal in this checkout, the equivalent commands are:
-
-   ```sh
-   cd /workspace/laundry-
-   git add .
-   git diff --cached --stat
-   git commit -m "Build static laundry platform with Supabase"
-   git push origin HEAD:main
-   ```
-
-   Run the push only when you have reviewed the changes and are ready to publish the code. Check that shared/config.js contains **public values only**. data/, node_modules/ and .env files are ignored. The previous local prototype archive is outside this checkout and is not uploaded.
-2. GitHub → **clint-99/laundry- → Settings → Pages**. Under **Build and deployment → Source**, choose **GitHub Actions**.
-3. GitHub → **Actions → Deploy static laundry platform → Run workflow** (branch main), or push a commit to main. Wait for the deploy job to complete.
-4. The expected project site is `https://clint-99.github.io/laundry-/`. Use the actual URL shown in **Settings → Pages**. The customer page is `…/laundry-/book/`, owner `…/owner/`, rider `…/rider/`. Only the static public folders are uploaded, not SQL, tests, development tools or documentation.
-5. For a new repository instead: GitHub top-right **+ → New repository**, choose a name and create it, add its remote to a reviewed copy of these files, and repeat the Pages steps. Relative asset URLs support a repository subpath. A dedicated custom domain is recommended if other sites under your GitHub account are untrusted.
-
-## 2. Create Supabase and copy only public configuration
-
-1. Sign in to [Supabase Dashboard](https://supabase.com/dashboard) → **New project**. Choose your organization, project name, strong database password and a suitable region. Save the database password in a password manager, not this repository. Wait until the project is provisioned.
-2. Project → **Settings → API** (some dashboards call this **API Keys** / **Data API**). Copy **Project URL** and the browser **anon public** key from the legacy API keys section. A modern publishable browser key may also work with the client, but this implementation was written for the anon-key flow. **Never copy service_role or a secret key to a web page.**
-3. Open `shared/config.js`. Fill SUPABASE_URL and SUPABASE_ANON_KEY between the quotes. Optionally replace BRAND_NAME and LOGO. The first two values are public by design. Leave TURNSTILE_SITE_KEY blank until step 5.
-4. Commit and push this public config change when ready. Test account keys are not prefilled in this repository.
-
-## 3. Install the database and lock down Auth
-
-1. Supabase → **SQL Editor → New query**. Open `supabase/migrations/001_init.sql`, copy its **entire contents**, paste into the editor and click **Run**. Run this once in a fresh project. It creates tables, RLS, functions and the Realtime publication entries. Do not re-run it on an established database; use a new migration for changes.
-2. If you see an error, do not skip the failed section or disable RLS. Save the error text without secrets and investigate. The migration is transactional, so a failure rolls back its changes.
-3. Supabase → **Authentication → Sign In / Providers → Email** (or **Providers → Email**). Turn **Allow new users to sign up** off. Keep email/password sign-in enabled. Configure **Confirm email** according to your staff onboarding; staff-admin explicitly confirms owner-created rider email addresses so they can use their initial password. These are private staff accounts, not customer accounts.
-4. **Authentication → URL Configuration → Site URL**: enter your full Pages address, e.g. `https://clint-99.github.io/laundry-/`. Under **Redirect URLs**, add the full owner and rider URLs. Do not use unrestricted wildcard origins. The app uses password sign-in, not public signup links.
-5. **Authentication → Settings / Security and Protection**: set minimum password length to at least **12**, enable available strong-password/leaked-password protections, and use unique staff passwords. Under the project's **JWT settings**, set access-token lifetime to approximately **1800 seconds** with session refresh enabled. The exact controls depend on the project's JWT-key version; follow the dashboard’s guidance. Deactivation does not wait for JWT expiry because policies check profiles.active every request.
-6. Optional demo: in a disposable test project only, run `supabase/seed.sql` in SQL Editor. It adds a sample ₱190 service, ₱125 shop and one **Demo Customer**, plus sample area names. Do not treat these names/numbers as real contacts. For production, skip the seed and enter your actual services/shops in the owner page.
-
-## 4. Create the first owner
-
-1. Supabase → **Authentication → Users → Add user → Create new user**. Enter your email and a strong password. Use **Auto Confirm User** for this owner-created account if that option is present. Do not use public signup.
-2. Open the new user row and copy the **User UID** (UUID).
-3. **SQL Editor → New query**. Replace the two placeholder strings below, then **Run**:
-
-   ```sql
-   insert into public.profiles (id, role, full_name)
-   values ('PASTE-USER-UUID-HERE', 'owner', 'Your name');
-   ```
-
-4. Repeat these steps for a second trusted owner if needed. The staff page creates riders only. Do not manually assign an owner role to a rider.
-5. Visit your owner page and sign in after the public configuration is deployed. With the migration installed, you should see Today and the owner navigation. If not, verify the user's UUID and active profile; do not remove permission checks to make login work.
-
-## 5. Create the Turnstile widget
-
-1. Sign in to [Cloudflare Dashboard](https://dash.cloudflare.com/) → **Turnstile → Add widget**.
-2. Give it a name and add the site hostname, e.g. `clint-99.github.io` (no `https://`, path or port). Choose **Managed** mode. Create the widget.
-3. Copy **Site Key** into TURNSTILE_SITE_KEY in shared/config.js. This key is public. Commit/push when ready.
-4. Keep the **Secret Key** private. Supabase → **Edge Functions → Secrets → Add new secret**: name `TURNSTILE_SECRET_KEY`, value the Cloudflare secret. Save it there, never in GitHub or chat.
-5. In the same Supabase Secrets screen add:
-   - `ALLOWED_ORIGIN`: the site's origin **only**, e.g. `https://clint-99.github.io`. Do **not** include `/laundry-/` or a trailing slash.
-   - `RATE_LIMIT_SALT`: a long random string from your password manager. Do not publish it. Changing it starts new rate-limit buckets.
-6. Supabase automatically supplies SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to deployed functions. Reuse these built-in secrets; do not copy the service-role key into local web files. If your deployment uses a different secret-key mechanism, keep it inside Supabase function secrets and adapt the function’s server-only binding.
-
-## 6. Deploy the Edge Functions
-
-Use a terminal on a machine with Node.js 24+ and this repository. Supabase CLI 2.121.0 was installed and its deployment flags checked; account access/deployment still needs your own login. You do not need to install a web framework or build the static app.
-
-1. Open the repository in a terminal:
+1. Install **Node.js 24 LTS** from https://nodejs.org/. Use the normal installer and keep “Add to PATH” enabled. Reopen your terminal if it was already open.
+2. GitHub → **clint-99/laundry- → Code → Download ZIP**. Extract the ZIP somewhere you will keep it, such as Documents/Laundry. Do not run from inside the ZIP.
+3. Windows: double-click **start.cmd**. macOS/Linux: open a terminal in the extracted folder and run `./start.sh`. If your system disallows script execution, run this instead:
 
    ```sh
-   cd /workspace/laundry-
-   npx --yes supabase@2.121.0 --version
-   npx --yes supabase@2.121.0 login
+   node server/app.js
    ```
 
-   In this cloud machine, if the CLI reports a read-only home/cache directory, run these supported tool-directory overrides before the commands above (your own computer normally does not need them):
+4. Keep that terminal window open. It reports the port (default **3000**) and the location of the data directory. It does not print passwords or the setup code.
+5. On that same computer, type **localhost:3000** into your browser's address bar. Choose **Owner login**, then **Create owner account**.
+6. Open the new **data/setup-code.txt** file in a local text editor. Copy its one-time code into the setup form. Do not put the code in GitHub, screenshots or chat. This proves you control the server computer.
+7. Enter your name, an email you want to use as a login name, and a unique password of **at least 12 characters**. No email service or inbox verification is needed. The app hashes your password before saving it. Create the account, then sign in at **Owner login**.
+8. The setup endpoint closes permanently once the first account exists. There are no default logins. The unused code file may remain, but it cannot create another account.
 
+You do not need `npm install` to start production: all server functions use Node's standard library and SQLite. The app initially has one active Wash, dry & fold service at ₱190/load, no customers or riders, and public bookings closed.
+
+## 2. Configure your business
+
+1. **Settings:** enter your business name, currency, timezone (Asia/Manila by default), hotline, Facebook URL if you use one, service areas (one per line), turnaround, cutoff, kg/load, pickup capacity and message templates. Keep bookings Closed while you test. Save.
+2. **Settings → Services & per-load prices:** edit the initial ₱190 service or add others. Existing orders retain their price snapshots.
+3. **Shops → Add shop:** name, phone, address, private cost/load and capacity. Target ₱125 is only a default suggestion—enter your actual partner's cost.
+4. **Customers → Add customer:** enter a pretend person with a number you control, area and pickup address. A permanent CU bag code is assigned. **Copy booking link** is for that one customer; send it privately.
+5. **Staff → Add rider:** enter a separate login email, name and unique password. Communicate the password privately. It is stored as a salted hash. Staff can be deactivated immediately or have passwords reset here. Use separate browsers/browser profiles to test owner and rider; cookies are shared between tabs at the same site.
+6. **New order:** choose the customer, service, loads, bags, shop, dates and window. Save and check Details/history. The server computes prices; riders see operational data only.
+7. **Labels:** select customers and print reusable bag labels on A4 at 100% scale with browser headers/footers disabled. Test on plain paper before sticker sheets.
+8. **Reports → Record rider pay:** record daily/batch costs; compare reports with a pretend delivered order.
+9. Open public bookings and use the customer page in a separate browser. New requests require answering a small math question, then appear under Pending. Approve after reviewing. Returning links book immediately unless there is already an active order.
+10. Follow TESTING.md with pretend data before sharing the app with real customers. Have Filipino copy and the privacy/retention notice reviewed locally.
+
+## 3. Let riders use phones on your Wi-Fi
+
+1. Keep the server computer awake and connected to your Wi-Fi. Find its local IPv4 address: Windows `ipconfig`; macOS/Linux network settings. Example only: `192.168.1.50`.
+2. Stop the server (Ctrl+C). To listen on your network, run:
+
+   Windows PowerShell:
+   ```powershell
+   $env:HOST="0.0.0.0"
+   node server/app.js
+   ```
+
+   macOS/Linux:
    ```sh
-   export SUPABASE_HOME=/tmp/laundry-supabase-cli
-   export npm_config_cache=/tmp/laundry-npm-cache
+   HOST=0.0.0.0 node server/app.js
    ```
 
-   Follow the browser login prompt. Never put the resulting access token in shared/config.js.
-2. Supabase Dashboard → **Settings → General** → copy **Reference ID**. Link the project:
+3. If prompted, allow your operating system's firewall access on your **private network only**. Riders on the same Wi-Fi type your computer's actual address plus port **3000**, for example `192.168.1.50:3000/rider/`.
+4. Ordinary HTTP on a trusted LAN is only suitable for a pretend-data trial. It is not encrypted; anyone able to intercept that network could capture logins. Use HTTPS before real staff/customer data. PWA installation, service workers and optional geolocation may be unavailable on a non-HTTPS LAN address.
+5. Outside your Wi-Fi, this private address will not work. Do not open router ports directly to an HTTP service. For internet use, put the app behind an HTTPS reverse proxy on a machine/host you control, set PUBLIC_ORIGIN, and restrict direct access to the Node port. A static GitHub Pages URL cannot run SQLite or this server.
 
-   ```sh
-   npx --yes supabase@2.121.0 link --project-ref YOUR_PROJECT_REFERENCE
-   ```
+## 4. Public HTTPS deployment (optional, requires a host)
 
-   Enter the database password only when the CLI securely prompts. If SQL was already run manually, do not also push it blindly through `db push`; keep the migration history consistent before adopting automated migrations.
-3. Secrets can be entered through the Dashboard in step 5. For CLI-based secret setup instead, create a private file **outside the repository**, e.g. `/tmp/laundry-edge.env`, in your local editor. Put these names with your real values there (never commit or paste the completed file):
+SQLite has no subscription; public hosting is separate. You can run it on an existing always-on machine, home server or hosting you already have. This task does not promise a free always-on provider or public internet deployment.
 
-   ```dotenv
-   ALLOWED_ORIGIN=https://clint-99.github.io
-   RATE_LIMIT_SALT=YOUR_LONG_RANDOM_PRIVATE_STRING
-   TURNSTILE_SECRET_KEY=YOUR_PRIVATE_CLOUDFLARE_SECRET
-   ```
+- Run Node 24+, use persistent disk, keep one server process per database, and serve the whole app/API on one origin. Avoid ephemeral/serverless filesystems that erase local data.
+- Put an HTTPS reverse proxy in front of the loopback-bound Node service. Set **PUBLIC_ORIGIN** to the exact external origin, e.g. `https://laundry.example.com` (no trailing slash or path). This enables Secure session cookies and checks browser write origins. Do not expose raw port 3000 to the internet.
+- The server deliberately does not trust X-Forwarded-For. Behind a reverse proxy, rate limits group callers by the proxy's socket IP. This is conservative but may limit legitimate customers. Configure any per-client edge limits on a trusted proxy; do not blindly trust caller-controlled IP headers. The built-in math check is lightweight spam friction, not bot-proof verification.
+- Keep TLS, operating system and Node patched. A host with persistent storage, backups and enough availability is required; stop and keep bookings closed if you cannot provide those.
 
-   Then:
+## 5. Docker option
 
-   ```sh
-   chmod 600 /tmp/laundry-edge.env
-   npx --yes supabase@2.121.0 secrets set --env-file /tmp/laundry-edge.env
-   rm /tmp/laundry-edge.env
-   ```
-
-4. Deploy all six functions from the checkout:
-
-   ```sh
-   npx --yes supabase@2.121.0 functions deploy public-config --no-verify-jwt --use-api
-   npx --yes supabase@2.121.0 functions deploy lookup --no-verify-jwt --use-api
-   npx --yes supabase@2.121.0 functions deploy book-again --no-verify-jwt --use-api
-   npx --yes supabase@2.121.0 functions deploy book-new --no-verify-jwt --use-api
-   npx --yes supabase@2.121.0 functions deploy track --no-verify-jwt --use-api
-   npx --yes supabase@2.121.0 functions deploy staff-admin --no-verify-jwt --use-api
-   ```
-
-   Public functions accept no customer login, so gateway JWT verification is disabled. **staff-admin is not public administration:** its handler explicitly validates the caller's JWT with Auth and requires an active owner profile. Do not remove these checks. config.toml records the same gateway configuration. If the CLI requests a deployment method, use its supported remote/API bundling; don't weaken TLS verification.
-5. In **Edge Functions**, check that all names appear and have no deployment errors. No deployed endpoint has been verified by the coding task without your account setup.
-6. Visit the live booking page. A configuration/captcha error means setup is still incomplete. Check URL/key, function names, allowed origin, widget hostname/action and secrets. Supabase → **Edge Functions → function → Logs** helps diagnose errors; do not log customer payloads or secrets.
-
-## 7. First run with your real business settings
-
-1. Owner page → **Settings**. Set business name, PHP symbol, **Asia/Manila** (change if your business uses another timezone), hotline, Facebook URL, max kg/load, turnaround, cutoff, daily capacity and real service areas (one per line). Save. Keep Public bookings **Closed** while testing.
-2. **Settings → Services & per-load prices → Add service**: enter the service name and price (default business assumption ₱190/load). Mark it active. Pickup/delivery are free; there are no batch discounts. Existing orders keep their original per-load price.
-3. **Shops → Add shop**: enter a real shop, phone, address, private cost/load and capacity. Demo target ₱125 is not a promise of real shop pricing. Archive a partner by setting it inactive; do not delete historical cost records.
-4. **Customers → Add customer**: use a pretend person with a test mobile number you control and an address you can inspect. The permanent bag code appears automatically. **Copy booking link** gives the private returning link. Do not post it publicly.
-5. **New order**: find that bag code or phone, choose service, loads/bags, shop, date/window and channel. Save. **Details / history** shows every change; customer-message templates can be copied there. Owner-only cost fields should never be sent in rider dispatch text.
-6. **Staff → Add rider**: create a pretend rider with a distinct email and unique temporary password. Share the password privately. Use a separate browser profile/incognito window for rider login; owner and rider sessions on the same origin share browser storage.
-7. Run the live checklist in TESTING.md, including deliberate anonymous/rider permission probes. Open bookings only after testing. Delete demo customers/shops only if unreferenced; cancel demo orders rather than deleting their audit trail.
-8. **Labels**: select customers, choose bags/customer, **Print selected labels**. In the browser print dialog choose **A4**, disable browser headers/footers and use **100%** scale. Print on plain paper first to match your sticker sheet. Put the permanent bag code, name and address label on each reusable bag.
-9. **Reports → Record rider pay**: record the daily/batch amount. Reports use delivered dates and these pay entries, not an assumed rider cost. Check warnings about missing shop costs before relying on margin.
-10. Have a native speaker review Filipino copy in shared/i18n.js. Have the privacy text and retention/deletion process checked for local data-protection requirements.
-
-## 8. Staff changes, backup and recovery
-
-1. **Staff → Add rider** creates a rider through the owner-only function. **Deactivate** immediately denies that rider's next database/RPC call, even if their access token has not expired. **Reset password** sets a new strong password for a rider; communicate it privately. Supabase Auth can also revoke sessions if a device is lost.
-2. **Customers → Reset link** invalidates the old personal booking token. Copy and privately send the new link. **Block** disables returning-token lookups/bookings; same-phone new requests still wait for owner review and are explicitly flagged. Do not approve them without resolving the issue.
-3. Each week: **Staff → Export customer backup CSV**, **Export order backup CSV**, and **Reports → Export CSV**. Store them in an encrypted/private location. Operational CSVs are not a full restore of events, settings, tokens and Auth users.
-4. For a full database backup, use Supabase's **Database → Backups** features available on your plan, or the official CLI:
-
-   ```sh
-   npx --yes supabase@2.121.0 db dump --linked -f /PRIVATE/BACKUP/PATH/laundry-schema.sql
-   npx --yes supabase@2.121.0 db dump --linked --data-only --use-copy -f /PRIVATE/BACKUP/PATH/laundry-data.sql
-   ```
-
-   Replace the path with a private location outside the repository. Check current Supabase backup guidance for Auth roles/users, extensions and storage; a public-schema dump alone is not a complete platform restore. Test restoration in a separate project before relying on it. Do not publish backups to GitHub.
-5. If a service-role or Turnstile secret leaks, follow SECURITY.md immediately: rotate/revoke through the provider, update server-only secrets, redeploy and review activity. Removing the key from config.js or Git history alone is not enough.
-6. Rider device offline: keep the page open. “Waiting to sync” means the server has not confirmed the tap. Retry when online. A conflict stays visible until resolved; never clear browser storage until queued actions have synced. Undo lasts 60 seconds from server acceptance, not indefinitely while offline.
-
-## 9. Local development and cloud environment
-
-No local Postgres/Supabase project is required just to view the public static shell. Staff and booking workflows need a configured backend; no insecure fake login is shipped.
+Docker is not required. If you already use it:
 
 ```sh
-cd /workspace/laundry-
-npm ci --cache /tmp/laundry-npm-cache
-npm test
-npm run test:db
-npm run check:edge
-npm start
+docker compose up --build -d
+docker compose logs laundry
 ```
 
-Keep the last command running, then use another terminal for `npm run test:browser`. The server is for internal validation only; production is GitHub Pages. Cloud environments retain files/dependencies, but running processes do not survive publication/restoration. The saved environment startup instructions start this static server again. Use the existing checkout; a new worktree is unnecessary.
+The container binds to your computer's loopback port 3000. The named **laundry-data** volume persists SQLite data across restarts/rebuilds. Read the setup code with:
 
-For a local backend, follow the official Supabase CLI local-development guide (Docker is required). Use **separate test keys**, a local allowed origin, and Cloudflare's official test widget credentials only in a local configuration. Never deploy test captcha credentials. This task's database tests use a real temporary PostgreSQL binary with stub Auth roles, and its browser tests mock APIs; they do not claim your hosted project is configured.
+```sh
+docker compose exec laundry cat /app/data/setup-code.txt
+```
+
+Do not post the output. Create your owner account in the browser. For HTTPS, set PUBLIC_ORIGIN in the environment before starting Compose and terminate TLS at your reverse proxy. The default Compose origin is `http://localhost:3000`; change it to the real origin you use.
+
+Never run `docker compose down -v` unless you deliberately want to delete the database volume and have a verified backup. Do not scale containers to multiple replicas sharing the same SQLite file. The image uses the unprivileged node user. The Node 24 base tag receives upstream patches; pin a digest in a managed deployment after verifying it for your platform.
+
+## 6. Back up and restore
+
+1. **Staff → Download full database backup** makes a consistent SQLite snapshot, including orders, events, customers, settings, staff password hashes and sessions. Store it privately/encrypted. Never commit it to GitHub. This snapshot can be made while the app is running.
+2. CLI alternative (Node 24, no npm packages needed):
+
+   ```sh
+   node scripts/backup.mjs /PRIVATE/BACKUP/FOLDER
+   ```
+
+   Or `npm run backup` saves to a sibling laundry-backups folder by default. The source data folder can be overridden with DATA_DIR. CSV downloads are useful reports but are not a complete database restore.
+3. To restore: stop **all** app processes. Copy the current data directory to a separate private recovery location first. Remove the **old** `platform.sqlite-wal` and `platform.sqlite-shm` sidecars from the restoration directory, then replace `data/platform.sqlite` with the verified SQLite backup. Never combine sidecars from a different database with a restored snapshot. Start the app and verify settings, accounts, a customer and order history before reopening bookings.
+4. Preserve the entire data directory for normal moves. `server-secret` salts rate-limit/challenge hashes; a newly generated secret invalidates old challenges/rate buckets. A full SQLite backup restores all business data and staff hashes. Revoke exposed/stale staff sessions if restoring a shared or old backup.
+5. Keep at least one backup off the server computer and test restoration on a separate folder using `DATA_DIR` and a different PORT. A local file alone is not a backup if the disk fails.
+
+## 7. Update code from GitHub
+
+1. Download the updated source or `git pull` on a checkout with no conflicting edits.
+2. Keep **your existing data directory**; do not replace it with an empty extracted directory. Set DATA_DIR to its absolute path if keeping data separately from code.
+3. Stop the server and restart with Node 24. Current SQLite tables are created automatically if missing. Future data-model upgrades must include explicit migrations; do not delete the database to resolve an update error.
+4. This version deliberately replaces the previous Supabase app. No external Supabase data or credentials were supplied, so none were imported. If you already populated a hosted Supabase project, export it privately and request a migration before switching live operations. An older prototype `data/laundry.sqlite`, if present, is left untouched and is not used as `platform.sqlite`.
+
+## 8. Tests and cloud workspace
+
+```sh
+npm ci
+npm test
+npm run test:browser
+```
+
+Tests use temporary folders and no live database/accounts. Browser tests start their own local server, so no separate npm start process is needed. Set CHROMIUM_PATH if Chromium/Chrome is not at `/usr/bin/chromium`. Docker/public TLS deployment and physical printing still need your own checks.
+
+Use the existing isolated checkout in cloud tasks; do not create a worktree unless requested. The installed files/data remain; server processes must restart. Cloud test environments may be temporary and are not a production host. Publishing a cloud snapshot does not deploy a public business service.

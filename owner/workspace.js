@@ -1,5 +1,5 @@
 import { h, replace } from "../shared/h.js";
-import { db, query, staffEdge } from "../shared/supabase.js";
+import { db, query, staffEdge } from "../shared/api.js";
 import {
   button,
   field,
@@ -411,9 +411,18 @@ export function staffView() {
       "secondary",
     ),
     h(
+      "a",
+      {
+        href: "/api/backup",
+        class: "button secondary",
+        download: "laundry-backup.sqlite",
+      },
+      "Download full database backup",
+    ),
+    h(
       "p",
       { class: "help" },
-      "CSV files are operational exports, not full database backups. See docs/SETUP.md for a complete database backup.",
+      "The full SQLite backup includes accounts, passwords (hashed), orders and history. Store it privately. CSV exports are only operational reports.",
     ),
   );
 }

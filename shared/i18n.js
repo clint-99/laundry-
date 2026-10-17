@@ -68,8 +68,7 @@ export const strings = {
       "Online booking is being connected. Please contact the business for a pickup.",
     retry: "Try again",
     security: "Complete the security check below.",
-    securityMissing:
-      "The security check is not connected yet. Please contact the business.",
+    securityMissing: "The security check could not load. Please retry.",
     securityRequired: "Please complete the security check.",
     today: "Today",
     tomorrow: "Tomorrow",

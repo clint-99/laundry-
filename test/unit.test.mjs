@@ -13,7 +13,7 @@ import {
   normalizePhone,
   validateBooking,
   token,
-} from "../supabase/functions/_shared/validation.js";
+} from "../server/validation.js";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 const payload = {
   token: "a".repeat(48),

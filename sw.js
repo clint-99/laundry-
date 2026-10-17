@@ -1,5 +1,5 @@
 // App shell only: never cache API responses, auth traffic, or customer records.
-const VERSION = "laundry-shell-v2";
+const VERSION = "laundry-shell-v3";
 const root = new URL("./", self.location.href);
 const paths = [
   "owner/",
@@ -13,8 +13,7 @@ const paths = [
   "shared/ui.js",
   "shared/ui.css",
   "shared/utils.js",
-  "shared/supabase.js",
-  "shared/vendor/supabase-js-2.118.0.js",
+  "shared/api.js",
   "icons/basket.svg",
   "icons/icon-192.png",
   "icons/icon-512.png",

@@ -1,34 +1,39 @@
-# Security model and launch requirements
+# Security: self-hosted SQLite
 
-Only SUPABASE_URL, SUPABASE_ANON_KEY (legacy anon/publishable browser credential), and TURNSTILE_SITE_KEY belong in shared/config.js. They are public. The Supabase service-role/secret key and TURNSTILE_SECRET_KEY belong **only in Supabase Edge Function secrets**. Do not put either in GitHub Pages files, GitHub Actions variables, browser requests, chat, screenshots, or the repository. Supabase normally supplies SUPABASE_SERVICE_ROLE_KEY inside Edge Functions automatically. Never copy it to config.js.
+## Storage and accounts
 
-## Permissions
+The app runs on a Node.js 24 server using its built-in SQLite library. `data/platform.sqlite` contains business records, audit history, hashed staff passwords and hashed session tokens. The data directory is private (0700 on POSIX), the database and bootstrap secret files are 0600, and it is excluded from Git and static HTTP routes. Windows access control depends on the containing user's folder permissions. No cloud provider or database subscription is required.
 
-- Anonymous users have no table, sequence or function grants. Every public request goes through an Edge Function using a strictly validated whitelist.
-- Active owner checks protect RLS and owner RPCs. Rider JWTs cannot read customer, price, shop, service, settings or pay tables. The only profile row riders can read is their own. Rider operational RPCs return a fixed set of fields without tokens, prices, shop costs or financial aggregates.
-- Deactivation is checked against profiles on each request, rather than trusting a cached JWT role. Postgres enforces transitions, undo age and event ordering. Owner overrides require an audit reason. No application grant deletes orders or audit events.
-- SECURITY DEFINER functions set an empty search_path and qualify data objects. Public and authenticated grants are revoked first, then explicitly opened. New objects need an explicit grant/policy. Random-token/sequence helper calls also require owner access for authenticated callers.
-- Public bookings serialize capacity and duplicate-active checks. Prices and costs come from triggers, with generated total_price. Returning address/identity/price fields sent by a malicious client are discarded. Unknown and blocked personal tokens have the same message.
-- New bookings verify Cloudflare Turnstile success, hostname and action before phone validation and booking. All public functions enforce exact CORS origin, POST, JSON, bounded bodies and rate limits. Staff administration verifies the JWT with Auth and looks up the active owner profile server-side.
+First-owner creation requires a random one-time code from the server's private data directory. There is no default account/password, public signup or internet email dependency. Setup closes after the first staff account exists. Passwords are salted with random 128-bit salts and hashed with Node scrypt (64-byte derived key, N=16384/r=8/p=1); comparisons are constant-time. Login failures use a generic message and are rate-limited by socket IP and email. The server never returns password hashes in session/profile APIs.
 
-## Browser and device data
+Staff sessions use random 256-bit cookies with HttpOnly, SameSite=Strict and an eight-hour expiry; only SHA-256 token hashes are stored in SQLite. `PUBLIC_ORIGIN=https://your-domain` enables Secure cookies. All state-changing browser API requests require JSON plus X-Laundry-Request and reject a mismatching Origin. The server exposes no cross-origin CORS API. Never share the app origin with untrusted web applications.
 
-Every page has CSP and no-referrer metadata. Staff pages are noindex (this is not access control). Customer text is rendered through createElement/textContent; no application innerHTML. Links are protocol-checked or safely encoded. Booking tokens are read from fragments and immediately removed from the address bar; never put them in query strings or send them to analytics. Treat a personal link like a bearer credential: anyone holding it can rebook for that customer.
+## Server permissions
 
-Auth sessions are maintained by Supabase in localStorage. Do not use staff accounts on shared/untrusted devices. Sign out when finished. The rider offline queue is keyed by account and can include order IDs and problem notes, but not full task/address caches; clear it only after confirming all actions synced. Logout keeps pending actions for the same account to avoid losing work. Service-worker Cache Storage includes only allowlisted static shell files. It never caches API responses or customer data. Clearing site data while offline loses unsynced actions; warn riders of this before using browser cleanup tools.
+Every table/action endpoint reloads the active profile. Owners can manage business data; riders cannot call the generic table API except to read their own public profile. Rider tasks have an explicit field whitelist with no price, cost, margin, private customer notes or booking token. The backend enforces the transition allowlist, same-actor/last-event/60-second undo rules and UUID idempotency. Deactivation/password reset invalidates that rider's sessions immediately. No screen-hiding rule is relied on for authorization.
 
-GitHub project Pages share an origin across repositories. Prefer a dedicated custom domain if other applications on the same account/origin are untrusted; browser storage cannot isolate projects by path. Keep device screens locked and CSV exports private. Browser notifications contain only “New booking”, not customer data.
+SQL identifiers are chosen only from fixed server table/field allowlists; all values use bound parameters. Orders use foreign keys and constraints, generated totals, immutable order/customer codes and server-controlled price/cost snapshots. No arbitrary SQL endpoint is exposed. SQLite triggers prohibit hard deletion of orders and modification/deletion of audit events. All mutation groups use BEGIN IMMEDIATE transactions. Price/report calculations happen server-side; browser totals are estimates.
 
-## Before launch
+Public bookings are the only unauthenticated business-data API. public-config returns an explicit nonprivate whitelist. Returning links are 192-bit random tokens; lookup gives first name/area/own active-order summary only. The address and customer identity come from that token on the server. Blocking/resetting a link takes effect immediately. Treat personal links like passwords: whoever holds one can rebook for that customer. Tokens are read from URL fragments and removed from the address bar.
 
-Complete docs/SETUP.md and the live tests in docs/TESTING.md. Disable public sign-ups, configure a strong password policy, choose short JWT lifetime with refresh, check email/redirect URLs, and verify the trusted client-IP header at your Supabase gateway. Never broaden ALLOWED_ORIGIN to `*`. CORS alone cannot stop nonbrowser requests; actual captcha, rate limits, token validation and permissions must be tested.
+New-customer requests require a short-lived, one-use, IP-bound math challenge, consent and bounded/validated fields. Socket-IP and phone rate limits constrain abuse; a honeypot field is also rejected if present. **Math questions are not strong bot detection.** Public internet operation needs monitoring and appropriate edge protections; a capable bot can solve arithmetic. The server ignores X-Forwarded-For rather than trusting spoofable headers. Behind a proxy, callers share that proxy's socket bucket by default; configure trusted rate limiting at your HTTPS proxy when needed.
 
-Have the privacy notice, retention and deletion procedure reviewed for your jurisdiction. Do not promise deletion of accounting records without determining lawful retention. Customer reports and backups contain personal data. The demo seed must not be confused with real orders or service coverage. Check current Supabase, GitHub Pages, Google Fonts and Cloudflare product limits/terms yourself; this repository does not claim a free-tier service guarantee.
+Request UUIDs deduplicate uncertain booking retries without changing a known customer's address or duplicating the saved receipt. New requests with known phone numbers wait for owner review and preserve saved contact/address data. Public capacity and duplicate-active decisions are transactional. Owner manual orders intentionally can override capacity/multiple-active limits.
 
-## If a secret leaks
+## Browser and devices
 
-1. Stop accepting bookings if exposure may affect integrity (Settings → Public bookings → Closed).
-2. Supabase → Project Settings → API Keys: use the key rotation/revoke controls appropriate for the leaked key. If using legacy JWT-based service-role keys, follow the project's **JWT Keys** rotation process; it can affect anon keys and staff sessions. Follow the dashboard’s current rotation guidance rather than simply deleting a string in Git.
-3. Update Edge Function secret bindings if required. Update the browser anon key if rotation changed it. Redeploy functions and Pages; invalidate staff sessions as directed by Supabase.
-4. Cloudflare → Turnstile → widget → Settings: rotate the secret when relevant; update TURNSTILE_SECRET_KEY in Supabase. Test a new booking.
-5. Remove the secret from repository history and logs, but regard it as compromised even after removal. Review Auth users, profiles, orders/events and access logs for unexpected activity.
+CSP, no-referrer, X-Content-Type-Options and X-Frame-Options are set. Customer text uses createElement/textContent, never innerHTML. Staff HTML is noindex (not an access control). API responses use no-store. No auth token is saved in localStorage.
+
+The rider retry queue is keyed to the signed-in profile. It stores order/action IDs, desired actions and any queued problem note, not full address/task caches. Network failures/conflicts remain visible until sync or explicit resolution. Do not clear browser data while taps wait to sync. If localStorage is unavailable, keep the page open; crash durability cannot be promised. Signing out leaves queued actions for the same account on that device.
+
+PWA Cache Storage contains only an allowlist of static app files, never API responses, sessions, customers or task data. Offline cold-start authentication/task lookup is unavailable; the app shows a visible connection error. Previously loaded pages can queue taps. HTTPS (or loopback) is required for service workers/geolocation. The latest undo toast replaces older toasts; the database enforces whether an undo remains possible.
+
+## Operating safely
+
+Use an always-on computer/server with persistent disk, OS updates, TLS and backups. Bind loopback by default; do not expose raw HTTP to the internet. Set PUBLIC_ORIGIN to the exact external HTTPS origin when using a reverse proxy. Keep one Node process per SQLite database. This cloud development environment and GitHub Pages are not production hosts for the app.
+
+Full database backups contain personal data, staff password hashes and session hashes. Download is owner-only and uses SQLite's consistent backup API. Store snapshots encrypted and outside public source folders; test restore on a separate folder. Copying only platform.sqlite while it is being written can miss WAL data—use the backup command/button or stop the app first. Before restoring a different snapshot, preserve the current folder and do not reuse old WAL/SHM sidecars.
+
+Have local privacy/retention and Filipino copy reviewed before real use. Do not promise deletion of required accounting/audit records without legal review. Screen lock staff devices; revoke sessions by deactivating/resetting a rider after loss. There is no online password-reset email service. If the owner password is lost, a trusted server administrator must perform an audited offline password reset; do not erase business data or reopen setup as a workaround.
+
+If source code was publicly deployed under the old Supabase version, it contained blank public configuration only. This migration removes the SDK/Edge Functions. If you independently added real Supabase data or credentials, preserve/export it privately before retiring that project. This task did not import any hosted records.

@@ -1,34 +1,36 @@
-# Door-to-door Laundry Platform
+# Fresh Fold — Laundry Platform
 
-Static owner, rider and customer-booking pages for a laundry aggregator. GitHub Pages hosts the UI; Supabase supplies Postgres, Auth, RLS, Realtime and Edge Functions. No production build or application server is required.
+A laundry pickup/delivery app with **SQLite storage and local staff accounts**. No Supabase, cloud database subscription, API keys, Turnstile account, or runtime npm dependencies are required.
 
-- **Owner:** Today, order list/board and history, pending approvals, customers/personal links, shops, dispatch copy lists, server-calculated financial reports/CSV, A4 bag labels, settings, staff and rider pay.
-- **Rider:** shared pickup/delivery route, large permanent bag codes, call/text/maps, constrained status actions, 60-second undo, problem reports, durable offline-action retries and refresh.
-- **Customer:** no-login multi-step booking with Turnstile, private returning-customer links, live service settings, English/Filipino and server-confirmed per-load pricing.
+- **Owner:** orders and audit history, pending approvals, customers and personal booking links, shops, dispatch, financial reports, bag labels, business settings, rider accounts/pay, CSV and full database backups.
+- **Rider:** pickups/deliveries, call/text/maps, constrained status actions, 60-second undo, problem reports and a durable offline-action queue.
+- **Customer:** no-login booking, personal returning links, a local human check, configurable per-load prices and English/Filipino copy.
 
-## Start here
+## Run it
 
-Follow [docs/SETUP.md](docs/SETUP.md) for account setup and deployment. This checkout has no Supabase credentials or production accounts configured. Until you connect them, staff pages show setup instructions and booking is unavailable; this is deliberate, not a demo database.
+Install **Node.js 24 LTS** from [nodejs.org](https://nodejs.org/). Download this repository (GitHub → Code → Download ZIP) and extract it. On Windows double-click `start.cmd`; on macOS/Linux run `./start.sh`. Or use a terminal:
 
-For local static development (Node.js 24+):
+```sh
+node server/app.js
+```
+
+Open the running app on port 3000 in your browser. On first run, choose **Create owner account**, read the one-time code from `data/setup-code.txt` on the server computer, and choose your own email/password. No pre-made passwords exist. See [docs/SETUP.md](docs/SETUP.md) for exact steps.
+
+The database lives at **`data/platform.sqlite`**. It stays on disk when the server restarts. Preserve the whole `data/` directory, and download full database backups from **Staff** regularly. Never upload the data directory or backups to GitHub.
+
+**GitHub stores the code; it cannot run this SQLite server through GitHub Pages.** The Pages workflow publishes only a setup/download notice, not a nonworking booking screen. To use phones over Wi-Fi, run the server on an always-on computer on that network. Public internet access needs a host you control and HTTPS; SQLite itself has no subscription. Hosting, connectivity and electricity may still cost money. Do not enter real data into a publicly exposed HTTP service.
+
+## Development and testing
+
+No installation is required to run the app itself. Development tests use Node and Playwright:
 
 ```sh
 npm ci
-npm start
+npm test
+npm run test:browser
+npm run backup
 ```
 
-The development server binds loopback port 3000 (`PORT` overrides it). The site is also usable from any ordinary static HTTP server. Do not open HTML through file://. Set public project values in shared/config.js after following the setup guide. No keys are needed to run local tests.
+The browser suite starts its own temporary server/database and exercises real account setup, logins, owner/rider/customer flows, offline sync and backups without backend mocks. It defaults to `/usr/bin/chromium`; set CHROMIUM_PATH for your Chrome/Chromium executable. npm test includes real HTTP/SQLite security and persistence tests. Tests never populate the real database. Full details: [docs/TESTING.md](docs/TESTING.md).
 
-```sh
-npm test                       # unit + actual edge handlers with mocked services
-npm run test:db                 # temporary real PostgreSQL; Linux x64
-npm run check:edge              # Deno type checks
-npm start                      # keep running in another terminal for browser tests
-npm run test:browser            # Chromium; API/Turnstile mocks, no real bookings
-```
-
-Browser tests default to `/usr/bin/chromium`; override CHROMIUM_PATH if needed. TEST_BASE_URL overrides the local test address. For another OS, use Supabase’s local stack or a disposable Postgres database to port the database runner; deployment itself requires no Node/Postgres installation.
-
-Supabase JS is pinned and vendored in shared/vendor. `npm run vendor` reproduces it from package-lock.json; this is a maintenance command, not a deployment build step. `node scripts/icons.mjs` regenerates PNG icons from the SVG while the local server runs. Follow [SECURITY.md](docs/SECURITY.md) before handling real customer data.
-
-See [DECISIONS.md](docs/DECISIONS.md) for defaults and scope and [TESTING.md](docs/TESTING.md) for tested versus untested acceptance items. Live Supabase/Turnstile/Pages acceptance and native translation/privacy reviews remain launch prerequisites.
+Docker is optional: `docker compose up --build -d`. The persistent named volume stores your data. First-run instructions and HTTPS/LAN configuration are in SETUP.md. Review [docs/SECURITY.md](docs/SECURITY.md) before internet deployment. The previous Supabase version remains in Git history; it is no longer required or deployed by this version.

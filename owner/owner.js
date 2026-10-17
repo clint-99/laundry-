@@ -1,5 +1,5 @@
 import { h, replace } from "../shared/h.js";
-import { db, query } from "../shared/supabase.js";
+import { db, query } from "../shared/api.js";
 import {
   authGate,
   brand,
@@ -415,30 +415,18 @@ authGate(root, "owner", async (profile) => {
   let timer;
   const channel = db
     .channel("owner-live")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "orders" },
-      () => {
-        clearTimeout(timer);
-        timer = setTimeout(refresh, 400);
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "customers" },
-      () => {
-        clearTimeout(timer);
-        timer = setTimeout(refresh, 400);
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "order_events" },
-      () => {
-        clearTimeout(timer);
-        timer = setTimeout(refresh, 400);
-      },
-    )
+    .on("change", { table: "orders" }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 400);
+    })
+    .on("change", { table: "customers" }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 400);
+    })
+    .on("change", { table: "order_events" }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 400);
+    })
     .subscribe();
   const poll = setInterval(refresh, 30000),
     focus = () => refresh();

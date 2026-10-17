@@ -1,5 +1,5 @@
 import { h, replace } from "../shared/h.js";
-import { db, query } from "../shared/supabase.js";
+import { db, query } from "../shared/api.js";
 import {
   button,
   badge,

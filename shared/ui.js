@@ -1,6 +1,6 @@
 import { h, replace } from "./h.js";
 import { LABELS } from "./utils.js";
-import { db, query, configured } from "./supabase.js";
+import { db, query, request } from "./api.js";
 import { CONFIG } from "./config.js";
 export const button = (text, fn, kind = "primary") =>
   h("button", { type: "button", class: `button ${kind}`, onclick: fn }, text);
@@ -65,7 +65,7 @@ export function toast(message, action) {
       ),
     );
   node.append(button("×", () => node.remove(), "quiet"));
-  container.append(node);
+  container.replaceChildren(node);
   setTimeout(() => node.remove(), action ? 60000 : 8000);
 }
 export function errorBox(error, retry) {
@@ -139,40 +139,34 @@ export function brand(name) {
   );
 }
 export async function authGate(root, role, onLogin) {
-  if (!configured) {
+  try {
+    const status = await request("/api/setup/status");
+    if (status.needs_setup) {
+      replace(
+        root,
+        h(
+          "section",
+          { class: "setup-card" },
+          brand(),
+          h("h1", {}, "Set up your owner account"),
+          h(
+            "p",
+            {},
+            "Your database is ready. Create your private owner login to get started. No subscription or outside account is needed.",
+          ),
+          h(
+            "a",
+            { href: "../setup/", class: "button" },
+            "Create owner account",
+          ),
+        ),
+      );
+      return;
+    }
+  } catch (error) {
     replace(
       root,
-      h(
-        "section",
-        { class: "setup-card" },
-        brand(),
-        h("h1", {}, "Connect your workspace"),
-        h(
-          "p",
-          {},
-          "Your pages are ready. Connect Supabase to enable secure staff login and live orders.",
-        ),
-        h(
-          "ol",
-          {},
-          h("li", {}, "Follow docs/SETUP.md to create your Supabase project."),
-          h(
-            "li",
-            {},
-            "Add the public project URL and anon key in shared/config.js.",
-          ),
-          h("li", {}, "Run the migration and create your owner account."),
-        ),
-        h(
-          "a",
-          {
-            href: `${CONFIG.REPOSITORY_URL}/blob/main/docs/SETUP.md`,
-            target: "_blank",
-            rel: "noopener noreferrer",
-          },
-          "Read setup instructions",
-        ),
-      ),
+      errorBox(error, () => authGate(root, role, onLogin)),
     );
     return;
   }
@@ -255,7 +249,8 @@ export async function authGate(root, role, onLogin) {
     };
     replace(root, form);
   }
-  db.auth.onAuthStateChange((event) => {
+  db.auth.onAuthStateChange((event, error) => {
+    if (event === "SIGN_OUT_ERROR") toast(error.message);
     if (event === "SIGNED_OUT") login();
   });
   await check();

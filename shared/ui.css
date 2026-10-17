@@ -1064,3 +1064,11 @@ p,
 .brand span {
   overflow-wrap: anywhere;
 }
+
+/* Leave room for the latest undo toast on a one-handed rider screen. */
+body:has(.rider-shell):has(#toasts .toast) .rider-shell {
+  padding-bottom: 180px;
+}
+.rider-shell .button {
+  scroll-margin-bottom: 150px;
+}

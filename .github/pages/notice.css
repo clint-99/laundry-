@@ -1,0 +1,51 @@
+:root {
+  font-family: system-ui, sans-serif;
+  background: #f4faf9;
+  color: #12313a;
+  line-height: 1.6;
+}
+body {
+  margin: 0;
+  padding: 48px 24px;
+}
+main {
+  max-width: 660px;
+  margin: 7vh auto;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #0b6e70;
+  font-weight: 700;
+}
+h1 {
+  font-size: clamp(36px, 7vw, 60px);
+  line-height: 1.1;
+  letter-spacing: -2px;
+}
+p {
+  color: #506e76;
+}
+a {
+  display: inline-block;
+  background: #0b6e70;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  margin: 12px 8px 8px 0;
+}
+.secondary {
+  background: #e0eeea;
+  color: #12313a;
+}
+a:focus-visible {
+  outline: 3px solid #ffb703;
+  outline-offset: 4px;
+}
+small {
+  display: block;
+  color: #5b7480;
+  margin-top: 24px;
+}

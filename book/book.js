@@ -1,6 +1,5 @@
 import { h, replace } from "../shared/h.js";
-import { CONFIG } from "../shared/config.js";
-import { configured, edge } from "../shared/supabase.js";
+import { edge } from "../shared/api.js";
 import {
   brand,
   button,
@@ -11,7 +10,7 @@ import {
   skeleton,
   badge,
 } from "../shared/ui.js";
-import { money, phone, addDays, safeUrl } from "../shared/utils.js";
+import { money, phone, addDays, safeUrl, uuid } from "../shared/utils.js";
 import { translate } from "../shared/i18n.js";
 const root = document.getElementById("app");
 let lang = "en",
@@ -19,13 +18,26 @@ let lang = "en",
   customer,
   step = 0,
   token = new URLSearchParams(location.hash.slice(1)).get("t"),
-  turnstileToken = "",
-  turnstileId = null,
+  challengeWidget,
+  challengeId = "",
+  challengeAnswer = "",
   sending = false,
   receipt = null;
 if (location.hash)
   history.replaceState(null, "", location.pathname + location.search);
-const requestId = crypto.randomUUID();
+window.addEventListener("hashchange", () => {
+  const incoming = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (incoming) {
+    requestId = uuid();
+    token = incoming;
+    customer = null;
+    receipt = null;
+    step = 0;
+    history.replaceState(null, "", location.pathname + location.search);
+    start();
+  }
+});
+let requestId = uuid();
 const data = {
   name: "",
   phone: "",
@@ -68,11 +80,6 @@ function contact() {
 }
 function shell(...children) {
   document.documentElement.lang = lang === "fil" ? "fil" : "en";
-  if (turnstileId != null && window.turnstile) {
-    window.turnstile.remove(turnstileId);
-    turnstileId = null;
-    turnstileToken = "";
-  }
   replace(
     root,
     h(
@@ -108,21 +115,6 @@ function connectionError(e) {
 }
 async function start() {
   shell(skeleton());
-  if (!configured) {
-    shell(
-      h(
-        "section",
-        { class: "card" },
-        h("h1", {}, t("setup")),
-        h(
-          "p",
-          {},
-          "Follow docs/SETUP.md to connect the public booking service.",
-        ),
-      ),
-    );
-    return;
-  }
   try {
     cfg = await edge("public-config");
     if (!data.service_id) data.service_id = cfg.services[0]?.id || "";
@@ -136,8 +128,9 @@ async function start() {
         data.loads = customer.loads || 1;
         if (cfg.services.some((s) => s.id === customer.service_id))
           data.service_id = customer.service_id;
-      } catch {
-        customer = { invalid: true };
+      } catch (error) {
+        if (error.status === 400) customer = { invalid: true };
+        else throw error;
       }
     }
     render();
@@ -546,51 +539,33 @@ function newCustomer() {
   );
   if (step === 3) {
     const widget = h("div", {});
+    challengeWidget = widget;
     form.insertBefore(widget, error);
-    if (!CONFIG.TURNSTILE_SITE_KEY) {
-      widget.append(h("p", { class: "error" }, t("securityMissing")));
-      submit.disabled = true;
-    } else {
-      widget.append(h("p", { class: "help" }, t("security")));
-      const target = h("div");
-      widget.append(target);
-      loadTurnstile(target, error);
-    }
+    loadChallenge(widget, error);
   }
 }
-async function loadTurnstile(target, error) {
+async function loadChallenge(widget, error) {
+  challengeId = "";
+  challengeAnswer = "";
   try {
-    if (!window.turnstile)
-      await new Promise((resolve, reject) => {
-        let script = document.getElementById("turnstile-script");
-        if (!script) {
-          script = h("script", {
-            id: "turnstile-script",
-            src: "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
-            async: true,
-            defer: true,
-          });
-          document.head.append(script);
-        }
-        script.addEventListener("load", resolve, { once: true });
-        script.addEventListener("error", reject, { once: true });
-      });
-    if (!target.isConnected) return;
-    turnstileId = window.turnstile.render(target, {
-      sitekey: CONFIG.TURNSTILE_SITE_KEY,
-      action: "new-booking",
-      language: lang === "fil" ? "en" : lang,
-      callback: (value) => (turnstileToken = value),
-      "expired-callback": () => (turnstileToken = ""),
-      "error-callback": () => {
-        turnstileToken = "";
-        replace(error, errorBox(t("securityRequired")));
-      },
+    const check = await edge("challenge");
+    if (!widget.isConnected) return;
+    challengeId = check.id;
+    const answer = input("human_answer", "", {
+      inputmode: "numeric",
+      required: true,
+      autocomplete: "off",
     });
-  } catch {
+    answer.oninput = () => (challengeAnswer = answer.value);
+    replace(
+      widget,
+      field(`${t("security")} ${check.question}`, answer),
+      button(t("retry"), () => loadChallenge(widget, error), "quiet"),
+    );
+  } catch (e) {
     replace(
       error,
-      errorBox(t("securityRequired"), () => location.reload()),
+      errorBox(e, () => loadChallenge(widget, error)),
     );
   }
 }
@@ -600,7 +575,7 @@ async function send(returning, error, submit) {
     replace(error, errorBox(t("selectDate")));
     return;
   }
-  if (!returning && !turnstileToken) {
+  if (!returning && (!challengeId || !challengeAnswer)) {
     replace(error, errorBox(t("securityRequired")));
     return;
   }
@@ -619,7 +594,12 @@ async function send(returning, error, submit) {
             pickup_date: data.pickup_date,
             pickup_window: data.pickup_window,
           }
-        : { ...data, request_id: requestId, turnstile_token: turnstileToken },
+        : {
+            ...data,
+            request_id: requestId,
+            challenge_id: challengeId,
+            challenge_answer: challengeAnswer,
+          },
     );
     receipt = { result, returning };
     showReceipt();
@@ -628,10 +608,8 @@ async function send(returning, error, submit) {
       error,
       errorBox(e, () => send(returning, error, submit)),
     );
-    if (!returning && window.turnstile && turnstileId != null) {
-      window.turnstile.reset(turnstileId);
-      turnstileToken = "";
-    }
+    if (!returning && challengeWidget?.isConnected)
+      loadChallenge(challengeWidget, error);
   } finally {
     sending = false;
     submit.disabled = false;

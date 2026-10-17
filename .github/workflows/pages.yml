@@ -1,4 +1,5 @@
-name: Deploy static laundry platform
+# GitHub Pages cannot run the SQLite server. Publish only a migration/setup notice.
+name: Publish app setup information
 on:
   push:
     branches: [main]
@@ -11,22 +12,16 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
-  deploy:
+  notice:
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Stage only public site files
-        run: |
-          mkdir _site
-          cp index.html sw.js _site/
-          cp -r book owner rider shared icons _site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
-      - name: Deploy
-        id: deployment
+          path: .github/pages
+      - id: deployment
         uses: actions/deploy-pages@v4
