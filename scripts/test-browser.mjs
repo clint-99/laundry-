@@ -225,16 +225,94 @@ try {
   pass(
     "real customer booking, local human check, SQLite pending record and live owner approval",
   );
+  const registered = app.store
+    .all("customers")
+    .find((c) => c.phone === "+639178888888");
+  await book.reload();
+  await book.getByText(registered.bag_code, { exact: true }).waitFor();
+  assert.equal(await book.getByLabel("Full name", { exact: true }).count(), 0);
+  assert.equal(
+    await book.getByRole("button", { name: "Sign in", exact: true }).count(),
+    0,
+  );
+  const rememberedCookie = (await customerContext.cookies()).find(
+    (c) => c.name === "laundry_customer",
+  );
+  assert.ok(rememberedCookie.httpOnly);
+  const registeredOrder = app.store
+    .all("orders")
+    .find((o) => o.customer_id === registered.id);
+  const completion = await owner.evaluate(async (id) => {
+    const response = await fetch("/api/rpc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Laundry-Request": "1" },
+      body: JSON.stringify({
+        name: "owner_status",
+        args: {
+          p_order: id,
+          p_to: "delivered",
+          p_note: "Completed first trial order",
+        },
+      }),
+    });
+    return response.status;
+  }, registeredOrder.id);
+  assert.equal(completion, 200);
+  await book.goto(base + "/");
+  await book.getByRole("button", { name: "Book again", exact: true }).waitFor();
+  await book.getByText(registered.bag_code, { exact: true }).waitFor();
+  assert.equal(
+    await book.getByLabel("Mobile number", { exact: true }).count(),
+    0,
+  );
+  await book.getByRole("button", { name: "Book again", exact: true }).click();
+  await book.getByRole("heading", { name: /LD-/ }).waitFor();
+  const repeated = app.store
+    .all("orders")
+    .filter(
+      (o) => o.customer_id === registered.id && o.source === "book_again",
+    );
+  assert.equal(repeated.length, 1);
+  assert.equal(repeated[0].status, "placed");
+  pass(
+    "same-device customer ID recognition and one-tap rebooking from the default page, with no login/details",
+  );
   const c = app.store.all("customers").find((c) => c.phone === "+639171234567");
   await book.goto(base + "/book/#t=" + c.booking_token);
   await book.getByRole("button", { name: "Book again", exact: true }).click();
   await book.getByRole("heading", { name: /LD-/ }).waitFor();
   assert.equal(new URL(book.url()).hash, "");
   assert.equal(
-    app.store.all("orders").filter((o) => o.source === "book_again").length,
+    app.store
+      .all("orders")
+      .filter((o) => o.source === "book_again" && o.customer_id === c.id)
+      .length,
     1,
   );
   pass("real token rebooking without customer login or external services");
+  await book.goto(base + "/book/");
+  await book
+    .getByRole("button", {
+      name: "Use this device for a different customer",
+      exact: true,
+    })
+    .click();
+  const blankName = book.getByLabel("Full name", { exact: true });
+  await blankName.waitFor();
+  assert.equal(await blankName.inputValue(), "");
+  assert.equal(
+    await book.getByLabel("Mobile number", { exact: true }).inputValue(),
+    "",
+  );
+  assert.equal(
+    (await customerContext.cookies()).some(
+      (c) => c.name === "laundry_customer",
+    ),
+    false,
+  );
+  pass(
+    "shared-device switch clears customer recognition and previously typed personal details",
+  );
   await nav(owner, "Staff");
   const downloadPromise = owner.waitForEvent("download");
   await owner
@@ -265,6 +343,8 @@ try {
   await owner.getByRole("checkbox").first().check();
   await owner.emulateMedia({ media: "print" });
   assert.equal(await owner.locator(".bag-label").count(), 1);
+  assert.doesNotMatch(await owner.locator(".bag-label").textContent(), /\+639/);
+  assert.equal(await owner.locator(".bag-label p").count(), 0);
   assert.equal(await owner.locator(".sidebar").isVisible(), false);
   await owner.emulateMedia({ media: "screen" });
   pass("responsive owner layouts and printable A4 labels");

@@ -4,7 +4,9 @@ A laundry pickup/delivery app with **SQLite storage and local staff accounts**. 
 
 - **Owner:** orders and audit history, pending approvals, customers and personal booking links, shops, dispatch, financial reports, bag labels, business settings, rider accounts/pay, CSV and full database backups.
 - **Rider:** pickups/deliveries, call/text/maps, constrained status actions, 60-second undo, problem reports and a durable offline-action queue.
-- **Customer:** no-login booking, personal returning links, a local human check, configurable per-load prices and English/Filipino copy.
+- **Customer (`/book/`, also the default page):** no account/login. Enter details once; after owner confirmation the same browser remembers the customer and shows their permanent customer/bag ID. Tap **Book again** to place the next order immediately using saved details. Private links restore recognition on another device. A local human check protects new requests.
+
+Only owners/operators (`/owner/`) and riders (`/rider/`) have staff accounts. Owners can monitor everything and assign shops. Riders see addresses, permanent IDs, bags and assigned shop details; they can pick up, drop at shop and deliver but cannot view admin data or finances. Bag labels contain ID/name only, with contact details kept in the system.
 
 ## Run it
 

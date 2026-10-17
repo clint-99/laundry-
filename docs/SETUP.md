@@ -15,7 +15,7 @@ This version uses **SQLite**, a database file on your own computer/server. There
    **Easy Mac Terminal method:** open Terminal (Applications → Utilities). Type `cd ` with a space, drag the extracted app folder from Finder into Terminal, and press Return. Then run `node server/app.js`. This does not require changing script permissions.
 
 4. Keep that terminal window open. It reports the port (default **3000**) and the location of the data directory. It does not print passwords or the setup code.
-5. On that same computer, type **localhost:3000** into your browser's address bar. Choose **Owner login**, then **Create owner account**.
+5. On that same computer, type **localhost:3000** into your browser's address bar. The default page is the customer page, with no login. Use **Owner / admin** at its bottom, then **Create owner account**.
 6. Open the new **data/setup-code.txt** file in a local text editor. Copy its one-time code into the setup form. Do not put the code in GitHub, screenshots or chat. This proves you control the server computer.
 7. Enter your name, an email you want to use as a login name, and a unique password of **at least 12 characters**. No email service or inbox verification is needed. The app hashes your password before saving it. Create the account, then sign in at **Owner login**.
 8. The setup endpoint closes permanently once the first account exists. There are no default logins. The unused code file may remain, but it cannot create another account.
@@ -27,13 +27,15 @@ You do not need `npm install` to start production: all server functions use Node
 1. **Settings:** enter your business name, currency, timezone (Asia/Manila by default), hotline, Facebook URL if you use one, service areas (one per line), turnaround, cutoff, kg/load, pickup capacity and message templates. Keep bookings Closed while you test. Save.
 2. **Settings → Services & per-load prices:** edit the initial ₱190 service or add others. Existing orders retain their price snapshots.
 3. **Shops → Add shop:** name, phone, address, private cost/load and capacity. Target ₱125 is only a default suggestion—enter your actual partner's cost.
-4. **Customers → Add customer:** enter a pretend person with a number you control, area and pickup address. A permanent CU bag code is assigned. **Copy booking link** is for that one customer; send it privately.
+4. **Customers → Add customer:** enter a pretend person with a number you control, area and pickup address. A permanent CU bag code is assigned. **Copy booking link** is for that one customer; send it privately when they use another browser/device. Opening it remembers that browser. The visible CU customer/bag ID is permanent and is not a password.
 5. **Staff → Add rider:** enter a separate login email, name and unique password. Communicate the password privately. It is stored as a salted hash. Staff can be deactivated immediately or have passwords reset here. Use separate browsers/browser profiles to test owner and rider; cookies are shared between tabs at the same site.
 6. **New order:** choose the customer, service, loads, bags, shop, dates and window. Save and check Details/history. The server computes prices; riders see operational data only.
 7. **Labels:** select customers and print reusable bag labels on A4 at 100% scale with browser headers/footers disabled. Test on plain paper before sticker sheets.
 8. **Reports → Record rider pay:** record daily/batch costs; compare reports with a pretend delivered order.
-9. Open public bookings and use the customer page in a separate browser. New requests require answering a small math question, then appear under Pending. Approve after reviewing. Returning links book immediately unless there is already an active order.
-10. Follow TESTING.md with pretend data before sharing the app with real customers. Have Filipino copy and the privacy/retention notice reviewed locally.
+9. Open public bookings and use the customer page in a separate browser. New customers enter contact/address details once, answer a small math question, and request pickup. Their device is remembered privately while the request awaits confirmation. Review and **Approve** it in Pending; that browser can then show the customer's permanent CU bag ID. After the order is delivered, reopening the normal customer page shows **Book again**, with service/loads/date prefilled. One tap places a new order immediately without typing contact/address or logging in. A second active order is refused.
+10. **On a shared customer device:** choose **Use this device for a different customer** to clear recognition and form details. A new device, private browsing, expired/cleared cookies needs the personal booking link; guessing a public bag ID cannot retrieve a customer's profile. If an existing phone is entered on a new signup, the request remains pending without exposing that person's saved details until an owner verifies it. Resetting the personal link invalidates remembered devices.
+11. **Bags:** write the permanent CU ID on each reusable bag (or use Labels). Rider pages match that ID to the saved customer/order address. Do not write phone numbers or addresses on bags; printed labels intentionally omit them.
+12. Follow TESTING.md with pretend data before sharing the app with real customers. Have Filipino copy and the privacy/retention notice reviewed locally.
 
 ## 3. Let riders use phones on your Wi-Fi
 

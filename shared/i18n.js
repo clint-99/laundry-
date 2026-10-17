@@ -2,6 +2,16 @@
 export const strings = {
   en: {
     language: "Filipino",
+    customerId: "Your permanent customer / bag ID",
+    bagInstructions:
+      "Write this ID on your reusable laundry bag. Your rider matches it to your order; no phone or address needs to be written on the bag.",
+    rememberAfterApproval:
+      "Your details are saved on this device. Once your first request is confirmed, your permanent customer ID appears here. Next time, open this page and tap Book again—no details to retype.",
+    refreshStatus: "Refresh my booking",
+    differentCustomer: "Use this device for a different customer",
+    requestCancelled:
+      "This request was cancelled. Contact the business or start a new request.",
+
     intro: "A little less laundry. A little more life.",
     newTitle: "Fresh laundry starts at your door.",
     subtitle: "Free pickup and delivery. We’ll handle the heavy lifting.",
@@ -44,7 +54,7 @@ export const strings = {
     consent:
       "I agree to share my contact and address details to arrange this laundry service.",
     privacy:
-      "We collect your name, mobile number, pickup address and optional location to arrange your booking. The owner and working riders see the details they need. Your personal link gives access to rebooking, so keep it private. Message the business to request correction or deletion, subject to record-keeping requirements.",
+      "We collect your name, mobile number, pickup address and optional location to arrange your booking. The owner and working riders see the details they need. Your personal link gives access to rebooking, so keep it private. We remember this browser using a private cookie so you can book again without typing details. On shared devices, choose Use this device for a different customer to forget it. Message the business to request correction or deletion, subject to record-keeping requirements.",
     request: "Request pickup",
     bookAgain: "Book again",
     sending: "Sending…",
@@ -83,6 +93,16 @@ export const strings = {
   },
   fil: {
     language: "English",
+    customerId: "Permanenteng customer / bag ID mo",
+    bagInstructions:
+      "Isulat ang ID na ito sa reusable laundry bag. Itutugma ito ng rider sa order; hindi na kailangang isulat ang numero o address sa bag.",
+    rememberAfterApproval:
+      "Nai-save ang detalye mo sa device na ito. Pag nakumpirma ang unang request, lalabas dito ang permanenteng customer ID. Sa susunod, buksan lang ito at pindutin ang Mag-book muli.",
+    refreshStatus: "I-refresh ang booking ko",
+    differentCustomer: "Gamitin para sa ibang customer",
+    requestCancelled:
+      "Nakansela ang request na ito. Makipag-ugnayan o gumawa ng bagong request.",
+
     intro: "Bawas labada. Dagdag oras para sa iyo.",
     newTitle: "Malinis na labada, mula sa iyong pintuan.",
     subtitle: "Libreng pickup at delivery. Kami na ang bahala.",
@@ -124,7 +144,7 @@ export const strings = {
     consent:
       "Pumapayag akong ibahagi ang aking contact at address para sa serbisyong ito.",
     privacy:
-      "Kinokolekta namin ang pangalan, mobile number, pickup address at opsyonal na lokasyon upang ayusin ang booking. Makikita ng may-ari at mga rider ang detalyeng kailangan nila. Panatilihing pribado ang personal na link. Mag-message para magpabago o magpabura ng impormasyon, alinsunod sa mga kinakailangang talaan.",
+      "Kinokolekta namin ang pangalan, mobile number, pickup address at opsyonal na lokasyon upang ayusin ang booking. Makikita ng may-ari at mga rider ang detalyeng kailangan nila. Naalala ng pribadong cookie ang browser na ito para sa susunod na booking. Sa shared device, piliing gamitin para sa ibang customer. Panatilihing pribado ang personal na link. Mag-message para magpabago o magpabura ng impormasyon, alinsunod sa mga kinakailangang talaan.",
     request: "Humiling ng pickup",
     bookAgain: "Mag-book muli",
     sending: "Ipinapadala…",

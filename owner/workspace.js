@@ -846,8 +846,6 @@ export function labelsView() {
               { class: "bag-label" },
               h("span", { class: "bag-code" }, c.bag_code),
               h("h3", {}, c.full_name),
-              h("p", {}, c.phone),
-              h("p", {}, `${c.area} · ${c.address}`),
               n > 1 && h("strong", {}, `Bag ${i + 1}/${n}`),
             ),
           ),
@@ -865,7 +863,7 @@ export function labelsView() {
       h(
         "p",
         {},
-        "The bag is the tag. Print permanent customer labels on an A4 sticker sheet.",
+        "Print the permanent customer ID and name on each reusable bag. Phone and address stay in the system, not on the bag.",
       ),
       h(
         "div",

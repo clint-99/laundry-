@@ -52,6 +52,12 @@ export function createApp({
     );
     return match?.[1] || "";
   };
+  const customerCookie = (req) =>
+    (req.headers.cookie || "").match(
+      /(?:^|;\s*)laundry_customer=([a-f0-9]{64})(?:;|$)/,
+    )?.[1] || "";
+  const rememberCookie = (value, remove = false) =>
+    `laundry_customer=${value}; Path=/api/public; HttpOnly; SameSite=Strict; Max-Age=${remove ? 0 : 365 * 86400}${publicOrigin.startsWith("https:") ? "; Secure" : ""}`;
   const sessionCookie = (value, remove = false) =>
     `laundry_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${remove ? 0 : 8 * 3600}${publicOrigin.startsWith("https:") ? "; Secure" : ""}`;
   async function body(req) {
@@ -168,12 +174,33 @@ export function createApp({
           store.rate("staff:" + ip, 40, 3600);
           return json(res, 200, store.staff(user, data));
         }
-        if (path.startsWith("/api/public/"))
-          return json(
-            res,
-            200,
-            store.public(path.slice("/api/public/".length), data, ip),
-          );
+        if (path.startsWith("/api/public/")) {
+          const name = path.slice("/api/public/".length);
+          if (name === "forget") {
+            res.setHeader("Set-Cookie", rememberCookie("", true));
+            return json(res, 200, { ok: true });
+          }
+          if (name === "remembered") {
+            store.rate("remembered:" + ip, 180, 3600);
+            return json(res, 200, {
+              customer: store.remembered(customerCookie(req)),
+            });
+          }
+          if (name === "book-again" && data.token == null)
+            data.token = store.rememberedToken(customerCookie(req));
+          const result = store.public(name, data, ip);
+          if (name === "lookup")
+            res.setHeader(
+              "Set-Cookie",
+              rememberCookie(store.rememberLink(data.token)),
+            );
+          if (name === "book-new" && result._remember_token) {
+            res.setHeader("Set-Cookie", rememberCookie(result._remember_token));
+            const { _remember_token, ...receipt } = result;
+            return json(res, 200, receipt);
+          }
+          return json(res, 200, result);
+        }
         throw new AppError("Not found.", 404);
       }
       if (req.method !== "GET" && req.method !== "HEAD")

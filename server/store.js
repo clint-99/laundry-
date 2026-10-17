@@ -680,6 +680,18 @@ export class Store {
     if (to === "cancelled")
       out.cancelled_reason = text(note, "cancellation reason", 1, 500);
     const result = this.update("orders", order.id, out);
+    if (
+      user?.role === "owner" &&
+      order.status === "pending_approval" &&
+      to === "placed"
+    ) {
+      const c = this.one("customers", result.customer_id);
+      this.db
+        .prepare(
+          "UPDATE customer_devices SET verified=1,customer_id=?,booking_token_hash=? WHERE order_id=?",
+        )
+        .run(c.id, hash(c.booking_token), order.id);
+    }
     if (to !== order.status) this.event(result, user, note);
     this.onChange("orders");
     return result;
@@ -910,6 +922,88 @@ export class Store {
     if (!c) throw new AppError("Link not valid");
     return c;
   }
+  rememberLink(token) {
+    const c = this.lookup(token),
+      deviceToken = hash(this.secret + ":customer-link:" + token);
+    this.db
+      .prepare("INSERT OR REPLACE INTO customer_devices VALUES(?,?,?,?,?,?,?)")
+      .run(
+        hash(deviceToken),
+        c.id,
+        null,
+        c.full_name.split(" ")[0],
+        1,
+        hash(c.booking_token),
+        now(),
+      );
+    return deviceToken;
+  }
+  remembered(deviceToken) {
+    const device =
+      typeof deviceToken === "string" && deviceToken.length === 64
+        ? this.db
+            .prepare("SELECT * FROM customer_devices WHERE token_hash=?")
+            .get(hash(deviceToken))
+        : null;
+    if (!device) return null;
+    const c = this.one("customers", device.customer_id);
+    if (!c || c.blocked || device.booking_token_hash !== hash(c.booking_token))
+      return null;
+    if (!device.verified) {
+      const order = this.one("orders", device.order_id);
+      return {
+        pending_confirmation: true,
+        first_name: device.submitted_first_name,
+        request: {
+          order_no: order.order_no,
+          status: order.status,
+          due_date: order.due_date,
+        },
+      };
+    }
+    return this.publicLookup(c);
+  }
+  rememberedToken(deviceToken) {
+    const device =
+      typeof deviceToken === "string"
+        ? this.db
+            .prepare(
+              "SELECT * FROM customer_devices WHERE token_hash=? AND verified=1",
+            )
+            .get(hash(deviceToken))
+        : null;
+    if (!device)
+      throw new AppError(
+        "Please use your personal booking link or wait for your first request to be confirmed.",
+      );
+    const c = this.one("customers", device.customer_id);
+    if (!c || c.blocked || device.booking_token_hash !== hash(c.booking_token))
+      throw new AppError("Link not valid");
+    return c.booking_token;
+  }
+  publicLookup(c) {
+    const orders = this.all("orders")
+        .filter((o) => o.customer_id === c.id)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      last = orders[0],
+      active = orders.find(
+        (o) => !["cancelled", "delivered"].includes(o.status),
+      );
+    return {
+      customer_code: c.bag_code,
+      first_name: c.full_name.split(" ")[0],
+      area: c.area,
+      loads: last?.loads || 1,
+      service_id: last?.service_id || null,
+      active_order: active
+        ? {
+            status: active.status,
+            order_no: active.order_no,
+            due_date: active.due_date,
+          }
+        : null,
+    };
+  }
   public(name, data, ip) {
     this.rate(
       name + ":ip:" + ip,
@@ -934,29 +1028,7 @@ export class Store {
         );
       return { id, question: `${a} + ${b} = ?` };
     }
-    if (name === "lookup") {
-      const c = this.lookup(data.token),
-        orders = this.all("orders")
-          .filter((o) => o.customer_id === c.id)
-          .sort((a, b) => b.created_at.localeCompare(a.created_at)),
-        last = orders[0],
-        active = orders.find(
-          (o) => !["cancelled", "delivered"].includes(o.status),
-        );
-      return {
-        first_name: c.full_name.split(" ")[0],
-        area: c.area,
-        loads: last?.loads || 1,
-        service_id: last?.service_id || null,
-        active_order: active
-          ? {
-              status: active.status,
-              order_no: active.order_no,
-              due_date: active.due_date,
-            }
-          : null,
-      };
-    }
+    if (name === "lookup") return this.publicLookup(this.lookup(data.token));
     if (name === "track") {
       const o = this.all("orders").find((o) => o.order_no === data.order_no);
       if (
@@ -984,7 +1056,12 @@ export class Store {
     if (cached) {
       if (cached.fingerprint !== fingerprint)
         throw new AppError("Request changed. Reload and try again.");
-      return JSON.parse(cached.result);
+      const result = JSON.parse(cached.result);
+      if (!returning)
+        result._remember_token = hash(
+          this.secret + ":customer-device:" + clean.request_id,
+        );
+      return result;
     }
     if (!returning) {
       if (data.website) throw new AppError("Please try again.");
@@ -1010,7 +1087,8 @@ export class Store {
         throw new AppError("Bookings are closed. Please message us.");
       if (!slot?.bookable || slot.capacity_left < clean.loads)
         throw new AppError("Choose an available pickup date.");
-      let c;
+      let c,
+        existingPhone = false;
       if (returning) {
         c = this.lookup(clean.token);
         if (
@@ -1035,6 +1113,7 @@ export class Store {
             .prepare("SELECT * FROM customers WHERE phone=?")
             .get(clean.phone),
         );
+        existingPhone = Boolean(c);
         if (!c)
           c = this.insert("customers", {
             id: randomUUID(),
@@ -1086,6 +1165,7 @@ export class Store {
               area: clean.area,
               landmark: clean.landmark,
               blocked_review: c.blocked,
+              existing_phone_review: existingPhone,
               consent: true,
             }),
           "note",
@@ -1097,11 +1177,34 @@ export class Store {
         pickup_window: order.pickup_window,
         status: order.status,
       };
+      if (!returning) {
+        const deviceToken = hash(
+          this.secret + ":customer-device:" + (clean.request_id || order.id),
+        );
+        this.db
+          .prepare("INSERT INTO customer_devices VALUES(?,?,?,?,?,?,?)")
+          .run(
+            hash(deviceToken),
+            c.id,
+            order.id,
+            clean.name.split(" ")[0],
+            0,
+            hash(c.booking_token),
+            now(),
+          );
+        result._remember_token = deviceToken;
+      }
       if (clean.request_id)
         this.insert("booking_requests", {
           id: clean.request_id,
           fingerprint,
-          result: JSON.stringify(result),
+          result: JSON.stringify(
+            Object.fromEntries(
+              Object.entries(result).filter(
+                ([key]) => key !== "_remember_token",
+              ),
+            ),
+          ),
         });
       this.onChange("orders");
       return result;

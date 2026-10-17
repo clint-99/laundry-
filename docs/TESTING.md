@@ -7,8 +7,8 @@ This replaces the previous Supabase-only acceptance record. Tests run against a 
 | Command / check | Result | What it demonstrates |
 |---|---|---|
 | `npm ci` | Passed | Only development tools installed; runtime needs no npm packages |
-| `npm test` | 22 passed; 0 failed/skipped | 14 real HTTP/SQLite integration subtests, their parent test and 7 unit/source checks |
-| `npm run test:browser` | 10 real workflow groups passed | First-owner setup, login, CRUD, actual rider/public booking flows, local verification, SSE, offline sync, printing and PWA |
+| `npm test` | 23 passed; 0 failed/skipped | 15 real HTTP/SQLite integration subtests, their parent test and 7 unit/source checks |
+| `npm run test:browser` | 12 real workflow groups passed | First-owner setup, login, CRUD, actual rider/public booking flows, local verification, SSE, offline sync, printing and PWA |
 | `npm audit` | No known vulnerabilities | Locked development dependencies at test time; not a complete security audit |
 | Static/runtime checks | Passed | All app pages/assets load; private data/server/Git paths denied |
 | Backup and restore validation | Passed | Owner-only consistent SQLite backup opens independently, integrity_check=ok, correct order count |
@@ -18,11 +18,13 @@ The current branch has no Supabase client, SQL/RLS migrations, Edge Functions, c
 
 ## macOS Monterey compatibility
 
-The full 22-test suite and 10 real browser workflow groups also passed using **Node.js 22.23.3** on Linux. Node 22.16 is the minimum because the full-backup API was introduced in that release. Official Node 22 x64 binaries support macOS 11+, while Node 24 binaries require macOS 13.5+. This gives Monterey 12.7.6 an official Node runtime option. The specific late-2015 Mac was not available for physical testing. On Node 22, the SQLite ExperimentalWarning is expected and is not a failed test.
+The full 23-test suite and 12 real browser workflow groups also passed using **Node.js 22.23.3** on Linux. Node 22.16 is the minimum because the full-backup API was introduced in that release. Official Node 22 x64 binaries support macOS 11+, while Node 24 binaries require macOS 13.5+. This gives Monterey 12.7.6 an official Node runtime option. The specific late-2015 Mac was not available for physical testing. On Node 22, the SQLite ExperimentalWarning is expected and is not a failed test.
+
+The customer-recognition update adds real API/browser coverage for first-approval gating, private cookie recognition, permanent ID display, one-tap rebooking with no token/details in the form, guessed public IDs being refused, and shared-device forgetting that clears both cookies and typed personal details. Normal visits to the root URL open the customer page. Customer cookies are HttpOnly and printed labels are checked to omit phone/address. Raw customer-device capabilities are not stored in cached receipts or returned in JSON.
 
 ## Integration coverage
 
-- Owner bootstrap needs the private one-time code. Wrong codes fail; setup closes after first account. No default owner credentials are shipped.
+- Owner bootstrap needs the private one-time code. Wrong codes fail; setup closes after first account. No default owner credentials are shipped. Customer recognition does not create staff accounts.
 - Passwords are hashed, session cookies are HttpOnly/SameSite, and session API does not reveal tokens/hashes. Anonymous tables/actions are denied. Cross-origin writes, missing custom request headers, non-JSON requests and oversized bodies are rejected.
 - Every rider table read/insert/update/delete on orders/customers/shops/services/settings/pay is denied, as are owner-only status/report/link functions. Rider tasks have no money/token fields. Private customer notes are not returned.
 - Owner configures business rules, partner shop, customer and a rider; creates a real order; server generates its price/cost snapshot and total. Forged prices and direct status changes fail.
@@ -41,10 +43,12 @@ The full 22-test suite and 10 real browser workflow groups also passed using **N
 4. Rider login and permission-safe route; a real offline browser queues a tap, reconnects, syncs and undoes it.
 5. Rider pickup/drop-off, owner ready, rider delivered; live owner refresh and report values.
 6. New customer multi-step form → local human answer → SQLite pending order → live owner approval through EventSource.
-7. Personal link rebooking in the same already-open customer tab; fragment clears and a real order is created.
-8. Owner downloads an actual full SQLite backup through the Staff page.
-9. Owner layout at 360/768/1440 pixels, dark booking at 360, and A4 print CSS/label generation.
-10. Service worker caches static shell only; an offline cold-start sign-in gives a visible error and caches no API/customer data.
+7. Same-device recognition after approval: reopen the default page, see the permanent ID, and book again without name/phone/address or login.
+8. Personal link rebooking in the same already-open customer tab; fragment clears and a real order is created.
+9. Shared-device switch clears recognition and form values.
+10. Owner downloads an actual full SQLite backup through the Staff page.
+11. Owner layout at 360/768/1440 pixels, dark booking at 360, and A4 print CSS/label generation.
+12. Service worker caches static shell only; an offline cold-start sign-in gives a visible error and caches no API/customer data.
 
 Two defects found by these tests were corrected: stacked undo toasts covering rider buttons, and same-tab personal-link navigation retaining an old receipt/request ID. Screenshot artifacts are under `/tmp/laundry-sqlite-screenshots/` in this development machine; they are not committed or deployed.
 

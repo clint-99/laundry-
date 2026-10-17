@@ -1072,3 +1072,23 @@ body:has(.rider-shell):has(#toasts .toast) .rider-shell {
 .rider-shell .button {
   scroll-margin-bottom: 150px;
 }
+
+.customer-identity {
+  padding: 18px 0;
+  border-block: 1px solid var(--border);
+  margin: 18px 0;
+}
+.customer-identity small {
+  display: block;
+  margin-bottom: 8px;
+}
+.customer-identity .bag-code {
+  font-size: 30px;
+}
+.customer-staff-links {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 32px;
+  font-size: 13px;
+}

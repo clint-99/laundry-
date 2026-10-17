@@ -20,3 +20,6 @@ CREATE TABLE IF NOT EXISTS booking_requests(id TEXT PRIMARY KEY,fingerprint TEXT
 CREATE TRIGGER IF NOT EXISTS orders_no_delete BEFORE DELETE ON orders BEGIN SELECT RAISE(ABORT,'Cancel orders instead of deleting them'); END;
 CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON order_events BEGIN SELECT RAISE(ABORT,'Audit events cannot be deleted'); END;
 CREATE TRIGGER IF NOT EXISTS events_no_update BEFORE UPDATE ON order_events BEGIN SELECT RAISE(ABORT,'Audit events cannot be changed'); END;
+-- Account-free customer recognition; only hashes are stored, never browser-readable secrets.
+CREATE TABLE IF NOT EXISTS customer_devices(token_hash TEXT PRIMARY KEY,customer_id TEXT NOT NULL REFERENCES customers(id),order_id TEXT REFERENCES orders(id),submitted_first_name TEXT NOT NULL,verified INTEGER NOT NULL DEFAULT 0,booking_token_hash TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS customer_devices_order ON customer_devices(order_id);

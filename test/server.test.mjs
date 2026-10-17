@@ -573,6 +573,100 @@ test("real SQLite HTTP workflows, authentication, permissions, persistence and s
       },
     );
     await t.test(
+      "customer device memory needs approval, never exposes a guessed ID, and rebooks without credentials",
+      async () => {
+        const customerBrowser = client();
+        const proof = await human();
+        const signup = await customerBrowser("/api/public/book-new", {
+          ...newPayload(),
+          phone: "09174444444",
+          ...proof,
+        });
+        assert.equal(signup.status, 200);
+        assert.equal("_remember_token" in signup.data, false);
+        assert.match(
+          signup.headers.get("set-cookie"),
+          /laundry_customer=.*HttpOnly; SameSite=Strict/,
+        );
+        let remembered = (await customerBrowser("/api/public/remembered", {}))
+          .data.customer;
+        assert.equal(remembered.pending_confirmation, true);
+        for (const cached of app.store.all("booking_requests"))
+          assert.equal("_remember_token" in JSON.parse(cached.result), false);
+        assert.equal("customer_code" in remembered, false);
+        assert.equal("phone" in remembered, false);
+        assert.equal("address" in remembered, false);
+        const again = {
+          service_id: service.id,
+          loads: 1,
+          pickup_date: bookingDate,
+          pickup_window: "Morning",
+          request_id: crypto.randomUUID(),
+        };
+        assert.equal(
+          (await customerBrowser("/api/public/book-again", again)).status,
+          400,
+        );
+        const o = app.store
+          .all("orders")
+          .find((o) => o.order_no === signup.data.order_no);
+        assert.equal(
+          (
+            await rpc(owner, "owner_status", {
+              p_order: o.id,
+              p_to: "placed",
+              p_note: "Confirmed first customer request",
+            })
+          ).status,
+          200,
+        );
+        remembered = (await customerBrowser("/api/public/remembered", {})).data
+          .customer;
+        assert.match(remembered.customer_code, /^CU-/);
+        assert.equal("phone" in remembered, false);
+        assert.equal("address" in remembered, false);
+        await rpc(owner, "owner_status", {
+          p_order: o.id,
+          p_to: "delivered",
+          p_note: "Trial complete",
+        });
+        const booked = await customerBrowser("/api/public/book-again", {
+          ...again,
+          customer_id: "another",
+          price: 1,
+          address: "FORGED",
+        });
+        assert.equal(booked.status, 200);
+        assert.equal(booked.data.status, "placed");
+        assert.equal(booked.data.total, 190);
+        assert.equal(
+          app.store
+            .all("orders")
+            .find((o) => o.order_no === booked.data.order_no).customer_id,
+          o.customer_id,
+        );
+        const stranger = client();
+        assert.equal(
+          (await stranger("/api/public/remembered", {})).data.customer,
+          null,
+        );
+        assert.equal(
+          (
+            await stranger("/api/public/book-again", {
+              ...again,
+              customer_code: remembered.customer_code,
+            })
+          ).status,
+          400,
+        );
+        await customerBrowser("/api/public/forget", {});
+        assert.equal(
+          (await customerBrowser("/api/public/remembered", {})).data.customer,
+          null,
+        );
+      },
+    );
+    await t.test(
       "capacity and rate limits are enforced; customer tokens reset and blocked links rejected",
       async () => {
         const slots = app.store.publicConfig().dates;

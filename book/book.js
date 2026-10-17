@@ -38,7 +38,7 @@ window.addEventListener("hashchange", () => {
   }
 });
 let requestId = uuid();
-const data = {
+const newDetails = () => ({
   name: "",
   phone: "",
   area: "",
@@ -53,7 +53,8 @@ const data = {
   pickup_window: "Morning",
   notes: "",
   consent: false,
-};
+});
+const data = newDetails();
 const t = (key, args) => translate(lang, key, args);
 function contact() {
   const nodes = [];
@@ -99,6 +100,12 @@ function shell(...children) {
         ),
       ),
       children,
+      h(
+        "footer",
+        { class: "customer-staff-links" },
+        h("a", { href: "../owner/" }, "Owner / admin"),
+        h("a", { href: "../rider/" }, "Rider"),
+      ),
     ),
   );
 }
@@ -131,6 +138,15 @@ async function start() {
       } catch (error) {
         if (error.status === 400) customer = { invalid: true };
         else throw error;
+      }
+    }
+    if (!token) {
+      const remembered = await edge("remembered");
+      customer = remembered.customer;
+      if (customer) {
+        data.loads = customer.loads || 1;
+        if (cfg.services.some((s) => s.id === customer.service_id))
+          data.service_id = customer.service_id;
       }
     }
     render();
@@ -277,25 +293,79 @@ function render() {
         { class: "card" },
         h("h1", {}, t("invalid")),
         contact(),
-        button(
-          t("notYou", { name: "" }),
-          () => {
-            token = null;
-            customer = null;
-            render();
-          },
-          "quiet",
-        ),
+        button(t("notYou", { name: "" }), () => forgetCustomer(), "quiet"),
       ),
     );
     return;
   }
+  if (customer?.pending_confirmation) return pendingRegistration();
+  if (customer?.active_order) return returning();
   if (!cfg.booking_open || !cfg.services.length) {
-    shell(h("section", { class: "card" }, h("h1", {}, t("closed")), contact()));
+    shell(
+      h(
+        "section",
+        { class: "card" },
+        customer && customerCard(),
+        h("h1", {}, t("closed")),
+        customer &&
+          button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
+        contact(),
+      ),
+    );
     return;
   }
-  if (token && customer) return returning();
+  if (customer) return returning();
   newCustomer();
+}
+function customerCard() {
+  return h(
+    "div",
+    { class: "customer-identity" },
+    h("small", {}, t("customerId")),
+    h("strong", { class: "bag-code" }, customer.customer_code),
+    h("p", {}, t("bagInstructions")),
+  );
+}
+async function forgetCustomer() {
+  try {
+    await edge("forget");
+    token = null;
+    customer = null;
+    receipt = null;
+    for (const key of Object.keys(data)) delete data[key];
+    Object.assign(data, newDetails(), {
+      service_id: cfg.services[0]?.id || "",
+      pickup_date:
+        cfg.dates.find((d) => d.bookable && d.capacity_left >= 1)?.date || "",
+    });
+    step = 0;
+    requestId = uuid();
+    render();
+  } catch (e) {
+    connectionError(e);
+  }
+}
+function pendingRegistration() {
+  const request = customer.request;
+  shell(
+    h(
+      "section",
+      { class: "card" },
+      h("h1", {}, t("hello", { name: customer.first_name })),
+      h("h2", {}, request.order_no),
+      badge(request.status),
+      h(
+        "p",
+        {},
+        request.status === "cancelled"
+          ? t("requestCancelled")
+          : t("rememberAfterApproval"),
+      ),
+      button(t("refreshStatus"), () => start()),
+      button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
+      contact(),
+    ),
+  );
 }
 function returning() {
   if (customer.active_order) {
@@ -305,10 +375,12 @@ function returning() {
         { class: "card" },
         h("h1", {}, t("hello", { name: customer.first_name })),
         h("p", {}, t("active")),
+        customerCard(),
         h("h2", {}, customer.active_order.order_no),
         badge(customer.active_order.status),
         h("p", {}, `${t("due")}: ${customer.active_order.due_date}`),
         h("p", {}, t("change")),
+        button(t("differentCustomer"), () => forgetCustomer(), "quiet"),
         contact(),
       ),
     );
@@ -328,6 +400,7 @@ function returning() {
     h(
       "section",
       { class: "card" },
+      customerCard(),
       h("p", {}, t("savedAddress", { area: customer.area })),
       orderControls(),
       error,
@@ -335,12 +408,7 @@ function returning() {
       h("p", { class: "help" }, t("priceFinal")),
       button(
         t("notYou", { name: customer.first_name }),
-        () => {
-          token = null;
-          customer = null;
-          step = 0;
-          render();
-        },
+        () => forgetCustomer(),
         "quiet",
       ),
     ),
@@ -601,6 +669,7 @@ async function send(returning, error, submit) {
             challenge_answer: challengeAnswer,
           },
     );
+    requestId = uuid();
     receipt = { result, returning };
     showReceipt();
   } catch (e) {
@@ -633,7 +702,16 @@ function showReceipt() {
         h("strong", {}, money(result.total, cfg.currency_symbol)),
         h("p", {}, `${result.pickup_date} · ${t(result.pickup_window)}`),
       ),
-      h("p", {}, returning ? t("free") : t("personalLink")),
+      h("p", {}, returning ? t("free") : t("rememberAfterApproval")),
+      !returning &&
+        button(
+          t("refreshStatus"),
+          () => {
+            receipt = null;
+            start();
+          },
+          "secondary",
+        ),
       contact(),
     ),
   );

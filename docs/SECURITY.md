@@ -37,3 +37,13 @@ Full database backups contain personal data, staff password hashes and session h
 Have local privacy/retention and Filipino copy reviewed before real use. Do not promise deletion of required accounting/audit records without legal review. Screen lock staff devices; revoke sessions by deactivating/resetting a rider after loss. There is no online password-reset email service. If the owner password is lost, a trusted server administrator must perform an audited offline password reset; do not erase business data or reopen setup as a workaround.
 
 If source code was publicly deployed under the old Supabase version, it contained blank public configuration only. This migration removes the SDK/Edge Functions. If you independently added real Supabase data or credentials, preserve/export it privately before retiring that project. This task did not import any hosted records.
+
+## Customer recognition without accounts
+
+The public customer page uses a separate HttpOnly/SameSite=Strict cookie scoped to /api/public, with a one-year browser lifetime (Secure under HTTPS). Only its hash is stored in customer_devices. It is a private rebooking capability, not a staff session. No customer login/password is introduced and the printed CU ID cannot authenticate a customer.
+
+A new request creates a pending device record. Before owner approval, remembered responses reveal only that request's number/status and the first name submitted by that device—never an existing customer's bag code, phone, address or profile. Explicit owner approval binds the device to the approved order's customer and enables rebooking. A known-phone signup therefore cannot silently claim that customer's identity. Owner review must verify the submitted identity; the audit note flags existing_phone_review.
+
+Opening an existing private booking link also remembers the device. Recognized responses include only permanent bag ID, first name, area, last service/loads and own active-order summary. The server supplies the saved address and prices when rebooking. Resetting the customer booking token or blocking the customer invalidates device capabilities at the next request. Forgetting the customer clears only that browser's customer cookie and form details, not staff sessions or the customer's permanent database record.
+
+Printed labels contain only ID/name/bag numbering, not phone/address. Users on shared devices must use the visible different-customer control; cookies can remember identity until cleared/expired. Full database backups include device capability hashes.
