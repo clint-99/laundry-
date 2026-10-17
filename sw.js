@@ -1,5 +1,5 @@
 // App shell only: never cache API responses, auth traffic, or customer records.
-const VERSION = "laundry-shell-v3";
+const VERSION = "laundry-shell-v4";
 const root = new URL("./", self.location.href);
 const paths = [
   "owner/",

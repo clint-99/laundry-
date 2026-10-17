@@ -386,6 +386,41 @@ function reject(o) {
     async (v) => status(o, "cancelled", v.reason),
   );
 }
+function assignShop(o) {
+  const shops = state.shops.filter((s) => s.active || s.id === o.shop_id);
+  editableForm(
+    `Assign shop · ${o.order_no}`,
+    [
+      h(
+        "p",
+        {},
+        "Choose where the rider should drop off this order. The shop address appears on the rider's task list.",
+      ),
+      shops.length
+        ? field(
+            "Laundry shop",
+            select(
+              "shop_id",
+              [["", "Choose a shop"], ...shops.map((s) => [s.id, s.name])],
+              o.shop_id || "",
+            ),
+          )
+        : h(
+            "p",
+            {},
+            "No active shops yet. Close this window and add a shop in Shops first.",
+          ),
+    ],
+    async (v) => {
+      if (!v.shop_id)
+        throw Error("Choose a shop. Add one in Shops if none are available.");
+      await save(
+        query(db.from("orders").update({ shop_id: v.shop_id }).eq("id", o.id)),
+        "Shop assigned; rider task updated",
+      );
+    },
+  );
+}
 export function orderDetail(o) {
   let detailDialog;
   const c = customer(o),
@@ -457,6 +492,15 @@ export function orderDetail(o) {
       h(
         "div",
         { class: "inline" },
+        activeOrder(o) &&
+          button(
+            s ? "Change shop" : "Assign shop",
+            () => {
+              detailDialog.close();
+              assignShop(o);
+            },
+            "secondary",
+          ),
         button(
           "Edit details",
           () => {
@@ -710,6 +754,12 @@ export function ordersView(pending = false, compact = false) {
                               ? "Waiting for rider"
                               : "",
                           ),
+                    activeOrder(o) &&
+                      button(
+                        o.shop_id ? "Change shop" : "Assign shop",
+                        () => assignShop(o),
+                        "secondary",
+                      ),
                     button("Details / history", () => orderDetail(o), "quiet"),
                     pending &&
                       button(

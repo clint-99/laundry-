@@ -217,11 +217,30 @@ try {
     .getByRole("button", { name: "Pending (1)", exact: true })
     .waitFor();
   await nav(owner, "Pending (1)");
+  await owner.getByRole("button", { name: "Assign shop", exact: true }).click();
+  const partner = app.store.all("shops").find((s) => s.name === "Test Partner");
+  await owner
+    .getByLabel("Laundry shop", { exact: true })
+    .selectOption(partner.id);
+  await owner
+    .getByRole("dialog")
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await owner.getByRole("dialog").waitFor({ state: "hidden" });
+  const pendingOrder = app.store
+    .all("orders")
+    .find((o) => o.status === "pending_approval");
+  assert.equal(pendingOrder.shop_id, partner.id);
   await owner.getByRole("button", { name: "Approve", exact: true }).click();
   await owner
     .getByRole("navigation")
     .getByRole("button", { name: "Pending (0)", exact: true })
     .waitFor();
+  await rider.reload();
+  await rider.getByText("Shop Street", { exact: true }).waitFor();
+  pass(
+    "owner assigns a shop directly on a pending customer order; rider sees the drop-off address after approval",
+  );
   pass(
     "real customer booking, local human check, SQLite pending record and live owner approval",
   );
