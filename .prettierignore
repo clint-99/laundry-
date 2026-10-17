@@ -1,0 +1,4 @@
+shared/vendor/
+node_modules/
+data/
+test/.edge-handler.mjs

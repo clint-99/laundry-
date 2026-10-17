@@ -1,0 +1,2 @@
+# Preserve vendored bytes and upstream license formatting.
+shared/vendor/* -text -whitespace

@@ -1,0 +1,30 @@
+{
+  "name": "laundry-platform",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node --watch scripts/serve.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:db": "node scripts/test-db.mjs",
+    "test:browser": "node scripts/test-browser.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "check:edge": "deno check --node-modules-dir=manual supabase/functions/*/index.ts",
+    "format": "prettier --write \"{book,owner,rider,shared,scripts,test}/**/*.{js,mjs,ts,css,html}\" \"supabase/functions/**/*.{js,ts}\" index.html sw.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "deno": "2.9.6",
+    "esbuild": "0.25.12",
+    "pg": "8.16.3",
+    "playwright": "1.58.2",
+    "prettier": "3.6.2"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/linux-x64": "18.4.0-beta.17"
+  }
+}

@@ -1,0 +1,10 @@
+data/
+node_modules/
+
+test/.edge-handler.mjs
+.env
+.env.*
+!.env.example
+.supabase/
+supabase/.temp/
+_site/
